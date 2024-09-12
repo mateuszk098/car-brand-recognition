@@ -1,0 +1,39 @@
+version: 1
+incremental: false
+disable_existing_loggers: false
+
+# filters:
+
+formatters:
+  BASIC:
+    format: "[%(asctime)s: %(module)s - %(levelname)s]: %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+handlers:
+  CONSOLE:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: BASIC
+  FILE:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: BASIC
+    filename: logs.log
+    maxBytes: 1048576 # Max 1 MB per file.
+    backupCount: 5 # Max 5 files.
+    mode: a # Append mode of the file.
+    delay: true # Create the file when the first log is emitted.
+
+loggers:
+  TRAIN:
+    level: DEBUG
+    handlers: [FILE]
+    propagate: false
+  INFERENCE:
+    level: WARNING
+    handlers: [FILE]
+    propagate: false
+
+root:
+  level: INFO
+  handlers: [CONSOLE]
