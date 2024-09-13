@@ -18,7 +18,7 @@ class VehicleDataLoader(DataLoader):
         *args: Any,
         train_transform: Compose | None = None,
         eval_transform: Compose | None = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.dataset: SupportsTransform

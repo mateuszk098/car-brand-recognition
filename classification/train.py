@@ -1,4 +1,5 @@
 import math
+import os
 from argparse import ArgumentParser
 from pathlib import Path
 from types import SimpleNamespace
@@ -7,32 +8,38 @@ from typing import Any
 import torch
 import torch.nn as nn
 import yaml
+from dotenv import find_dotenv, load_dotenv
 from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
 from classification.network.resnet import SeResNet
-from classification.utils.callbacks import Callbacks, EarlyStopping, ModelCheckpoint
+from classification.utils.callbacks import Callbacks, EarlyStopping, ModelCheckpoint, PlotCheckpoint
 from classification.utils.common import init_logger
 from classification.utils.loaders import VehicleDataLoader
 from classification.utils.trainers import fit
 from classification.utils.transforms import VehicleTransform
 
+assert load_dotenv(find_dotenv()), "The .env file is missing!"
+
 torch.backends.cudnn.benchmark = True
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 
-logger = init_logger("TRAIN")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+logger = init_logger(os.getenv("LOGGER"))
 
 
-def load_config(config_path: str | Path) -> dict[str, Any]:
-    with open(config_path, "r", encoding="utf-8") as f:
+def load_config(config_file: str | Path) -> dict[str, Any]:
+    with open(config_file, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     return config
 
 
-def main(*, config_path: str | Path) -> None:
-    config = SimpleNamespace(**load_config(config_path))
+def main(*, config_file: str | Path) -> None:
+    logger.info(f"Loading configuration from {config_file!s}...")
+    config = SimpleNamespace(**load_config(config_file))
 
+    logger.info("Initializing datasets and loaders...")
     train_dataset = ImageFolder(config.TRAIN_DATASET)
     valid_dataset = ImageFolder(config.VALID_DATASET)
 
@@ -61,12 +68,11 @@ def main(*, config_path: str | Path) -> None:
         pin_memory=config.PIN_MEMORY,
     )
 
-    model = SeResNet(num_classes=num_classes).to(config.DEVICE)
-
+    logger.info("Initializing model, loss, metric, optimizer, and scheduler...")
+    model = SeResNet(num_classes=num_classes).to(DEVICE)
     loss = nn.CrossEntropyLoss()
     metric = metrics.MulticlassAccuracy(average="macro", num_classes=num_classes)
     optimizer = torch.optim.AdamW(model.parameters(), amsgrad=True, fused=True)  # type: ignore
-
     scheduler_steps = config.EPOCHS * int(math.ceil(len(train_dataset) / config.BATCH_SIZE))
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer,
@@ -79,13 +85,25 @@ def main(*, config_path: str | Path) -> None:
         max_momentum=config.MAX_MOMENTUM,
     )
 
+    logger.info("Initializing callbacks...")
     early_stopping_callback = EarlyStopping(config.PATIENCE, config.MIN_DELTA)
-    model_checkpoint_callback = ModelCheckpoint(model, optimizer, scheduler, freq=1)
-
+    model_checkpoint_callback = ModelCheckpoint(
+        model,
+        optimizer,
+        scheduler,
+        checkpoints_freq=config.CHECKPOINTS_FREQ,
+        checkpoints_dir=config.CHECKPOINTS_DIR,
+    )
+    plot_checkpoint_callback = PlotCheckpoint(
+        checkpoints_freq=config.CHECKPOINTS_FREQ,
+        checkpoints_dir=config.CHECKPOINTS_DIR,
+    )
     if config.RESUME:
-        model_checkpoint_callback.load(map_location=config.DEVICE)
+        model_checkpoint_callback.load(map_location=DEVICE)
+        plot_checkpoint_callback.load()
         logger.info("Resuming training from the latest checkpoint...")
 
+    logger.info(f"Start training on {torch.cuda.get_device_name(DEVICE)}...")
     history = fit(
         model=model,
         train_loader=train_loader,
@@ -95,16 +113,17 @@ def main(*, config_path: str | Path) -> None:
         optimizer=optimizer,
         scheduler=scheduler,
         epochs=config.EPOCHS,
-        device=config.DEVICE,
+        device=DEVICE,
         callbacks={
             Callbacks.EarlyStopping: early_stopping_callback,
             Callbacks.ModelCheckpoint: model_checkpoint_callback,
+            Callbacks.PlotCheckpoint: plot_checkpoint_callback,
         },
     )
 
 
 if __name__ == "__main__":
     p = ArgumentParser()
-    p.add_argument("--config_path", type=Path, required=True)
+    p.add_argument("--config_file", type=Path, required=True)
     kwargs = vars(p.parse_args())
     main(**kwargs)

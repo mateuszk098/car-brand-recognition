@@ -25,12 +25,12 @@ handlers:
     delay: true # Create the file when the first log is emitted.
 
 loggers:
-  TRAIN:
+  DEBUG:
     level: DEBUG
     handlers: [FILE]
     propagate: false
-  INFERENCE:
-    level: WARNING
+  INFO:
+    level: INFO
     handlers: [FILE]
     propagate: false
 
