@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict
+from typing import Any, Callable
 
 import torch
 from torch.nn import Module
@@ -9,10 +10,9 @@ from torcheval.metrics import Metric
 
 from classification.utils.common import init_logger
 
-from .callbacks import EarlyStopping
+from .callbacks import Callbacks
 from .loaders import VehicleDataLoader
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger = init_logger("TRAIN")
 
 
@@ -22,13 +22,14 @@ def train_step(
     loss: Module,
     optimizer: Optimizer,
     scheduler: LRScheduler,
+    device: str,
 ) -> None:
     model.train()
     loader.train()
 
     for x, y in loader:
-        x, y = x.to(DEVICE), y.to(DEVICE)
-        loss_value = loss(model.forward(x).squeeze(), y)
+        x, y = x.to(device), y.to(device)
+        loss_value = loss.forward(model.forward(x).squeeze(), y)
         optimizer.zero_grad()
         loss_value.backward()
         optimizer.step()
@@ -36,7 +37,11 @@ def train_step(
 
 
 def valid_step(
-    model: Module, loader: VehicleDataLoader, loss: Module, metric: Metric
+    model: Module,
+    loader: VehicleDataLoader,
+    loss: Module,
+    metric: Metric,
+    device: str,
 ) -> tuple[float, float]:
     model.eval()
     loader.eval()
@@ -45,7 +50,7 @@ def valid_step(
 
     with torch.inference_mode():
         for x, y in loader:
-            x, y = x.to(DEVICE), y.to(DEVICE)
+            x, y = x.to(device), y.to(device)
             y_logit = model.predict(x).squeeze()
             y_proba = torch.softmax(y_logit, dim=-1)
             loss_value += loss.forward(y_logit, y).item()
@@ -54,7 +59,7 @@ def valid_step(
     return loss_value.item() / len(loader), metric.compute().item()
 
 
-def train_loop(
+def fit(
     model: Module,
     train_loader: VehicleDataLoader,
     valid_loader: VehicleDataLoader,
@@ -62,34 +67,52 @@ def train_loop(
     metric: Metric,
     optimizer: Optimizer,
     scheduler: LRScheduler,
-    early_stopping: EarlyStopping,
+    device: str,
     epochs: int = 100,
     verbose_step: int = 1,
+    callbacks: dict[Callbacks, Callable[..., Any]] | None = None,
 ) -> dict[str, list[float]]:
 
-    model = model.to(DEVICE)
+    start_epoch = 1
     history = defaultdict(list)
-    log = "Epoch: {:3d} | Time: {:3.2f}s | Loss: {:8.5f} | ACC: {:8.5f} | Val Loss: {:8.5f} | Val ACC: {:8.5f}"
+    log = (
+        "Epoch: {:3d} | Train Step Time: {:3.2f}s | Train Loss: {:8.5f} | "
+        "Train Accuracy: {:8.5f} | Val Loss: {:8.5f} | Val Accuracy: {:8.5f}"
+    )
 
-    for epoch in range(epochs):
+    callbacks = callbacks if callbacks is not None else dict()
+    checkpoint_callback = callbacks.get(Callbacks.ModelCheckpoint)
+    early_stopping_callback = callbacks.get(Callbacks.EarlyStopping)
+
+    if checkpoint_callback is not None:
+        checkpoint_loss = checkpoint_callback.history.get("loss")
+        if checkpoint_loss is not None:
+            start_epoch = len(checkpoint_loss) + 1
+            history = defaultdict(list, checkpoint_callback.history)
+
+    for epoch in range(start_epoch, epochs + 1):
         t0 = time.perf_counter()
-        train_step(model, train_loader, loss, optimizer, scheduler)
+        train_step(model, train_loader, loss, optimizer, scheduler, device)
         t1 = time.perf_counter()
 
-        train_loss, train_acc = valid_step(model, train_loader, loss, metric)
-        valid_loss, valid_acc = valid_step(model, valid_loader, loss, metric)
+        train_loss, train_acc = valid_step(model, train_loader, loss, metric, device)
+        valid_loss, valid_acc = valid_step(model, valid_loader, loss, metric, device)
 
-        if early_stopping(valid_loss):
-            logger.info("Early Stopping...")
-            break
+        history["epoch"].append(epoch)
+        history["loss"].append(train_loss)
+        history["accuracy"].append(train_acc)
+        history["val_loss"].append(valid_loss)
+        history["val_accuracy"].append(valid_acc)
 
-        if (epoch + 1) % verbose_step == 0 or epoch == 0:
-            info = log.format(epoch + 1, t1 - t0, train_loss, train_acc, valid_loss, valid_acc)
+        if epoch % verbose_step == 0 or epoch == 1:
+            info = log.format(epoch, t1 - t0, train_loss, train_acc, valid_loss, valid_acc)
             logger.info(info)
 
-        history["Loss"].append(train_loss)
-        history["ACC"].append(train_acc)
-        history["Val Loss"].append(valid_loss)
-        history["Val ACC"].append(valid_acc)
+        if checkpoint_callback is not None:
+            checkpoint_callback(history)
+
+        if early_stopping_callback is not None and early_stopping_callback(valid_loss):
+            logger.info("Early Stopping...")
+            break
 
     return history

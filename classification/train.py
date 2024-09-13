@@ -11,14 +11,17 @@ from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
 from classification.network.resnet import SeResNet
-from classification.utils.callbacks import EarlyStopping
+from classification.utils.callbacks import Callbacks, EarlyStopping, ModelCheckpoint
+from classification.utils.common import init_logger
 from classification.utils.loaders import VehicleDataLoader
-from classification.utils.trainers import train_loop
+from classification.utils.trainers import fit
 from classification.utils.transforms import VehicleTransform
 
 torch.backends.cudnn.benchmark = True
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
+
+logger = init_logger("TRAIN")
 
 
 def load_config(config_path: str | Path) -> dict[str, Any]:
@@ -58,7 +61,7 @@ def main(*, config_path: str | Path) -> None:
         pin_memory=config.PIN_MEMORY,
     )
 
-    model = SeResNet(num_classes=num_classes)
+    model = SeResNet(num_classes=num_classes).to(config.DEVICE)
 
     loss = nn.CrossEntropyLoss()
     metric = metrics.MulticlassAccuracy(average="macro", num_classes=num_classes)
@@ -76,8 +79,14 @@ def main(*, config_path: str | Path) -> None:
         max_momentum=config.MAX_MOMENTUM,
     )
 
-    early_stopping = EarlyStopping(config.PATIENCE, config.MIN_DELTA)
-    history = train_loop(
+    early_stopping_callback = EarlyStopping(config.PATIENCE, config.MIN_DELTA)
+    model_checkpoint_callback = ModelCheckpoint(model, optimizer, scheduler, freq=1)
+
+    if config.RESUME:
+        model_checkpoint_callback.load(map_location=config.DEVICE)
+        logger.info("Resuming training from the latest checkpoint...")
+
+    history = fit(
         model=model,
         train_loader=train_loader,
         valid_loader=valid_loader,
@@ -85,8 +94,12 @@ def main(*, config_path: str | Path) -> None:
         metric=metric,
         optimizer=optimizer,
         scheduler=scheduler,
-        early_stopping=early_stopping,
         epochs=config.EPOCHS,
+        device=config.DEVICE,
+        callbacks={
+            Callbacks.EarlyStopping: early_stopping_callback,
+            Callbacks.ModelCheckpoint: model_checkpoint_callback,
+        },
     )
 
 

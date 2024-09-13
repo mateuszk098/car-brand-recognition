@@ -1,3 +1,4 @@
+DEVICE: "cuda:0"
 INPUT_SIZE: [224, 224]
 TRAIN_DATASET: "../data/vehicles/train/"
 VALID_DATASET: "../data/vehicles/valid/"
@@ -15,3 +16,4 @@ MAX_MOMENTUM: 0.95
 NUM_WORKERS: 8
 PERSISTENT_WORKERS: True
 PIN_MEMORY: True
+RESUME: True
