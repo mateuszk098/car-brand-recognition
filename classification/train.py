@@ -13,7 +13,7 @@ from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
 from classification.network.resnet import SeResNet
-from classification.utils.callbacks import Callbacks, EarlyStopping, ModelCheckpoint, PlotCheckpoint
+from classification.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
 from classification.utils.common import init_logger
 from classification.utils.loaders import VehicleDataLoader
 from classification.utils.trainers import fit
@@ -94,7 +94,7 @@ def main(*, config_file: str | Path) -> None:
         checkpoints_freq=config.CHECKPOINTS_FREQ,
         checkpoints_dir=config.CHECKPOINTS_DIR,
     )
-    plot_checkpoint_callback = PlotCheckpoint(
+    plot_checkpoint_callback = LearningCurvesCheckpoint(
         checkpoints_freq=config.CHECKPOINTS_FREQ,
         checkpoints_dir=config.CHECKPOINTS_DIR,
     )
