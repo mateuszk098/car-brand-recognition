@@ -94,13 +94,13 @@ def main(*, config_file: str | Path) -> None:
         checkpoints_freq=config.CHECKPOINTS_FREQ,
         checkpoints_dir=config.CHECKPOINTS_DIR,
     )
-    plot_checkpoint_callback = LearningCurvesCheckpoint(
+    learning_curves_checkpoint_callback = LearningCurvesCheckpoint(
         checkpoints_freq=config.CHECKPOINTS_FREQ,
         checkpoints_dir=config.CHECKPOINTS_DIR,
     )
     if config.RESUME:
         model_checkpoint_callback.load(map_location=DEVICE)
-        plot_checkpoint_callback.load()
+        learning_curves_checkpoint_callback.load()
         logger.info("Resuming training from the latest checkpoint...")
 
     logger.info(f"Start training on {torch.cuda.get_device_name(DEVICE)}...")
@@ -112,12 +112,14 @@ def main(*, config_file: str | Path) -> None:
         metric=metric,
         optimizer=optimizer,
         scheduler=scheduler,
-        epochs=config.EPOCHS,
         device=DEVICE,
+        l1_weight=config.L1_WEIGHT,
+        l2_weight=config.L2_WEIGHT,
+        epochs=config.EPOCHS,
         callbacks={
             Callbacks.EarlyStopping: early_stopping_callback,
             Callbacks.ModelCheckpoint: model_checkpoint_callback,
-            Callbacks.PlotCheckpoint: plot_checkpoint_callback,
+            Callbacks.LearningCurvesCheckpoint: learning_curves_checkpoint_callback,
         },
     )
 

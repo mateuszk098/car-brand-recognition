@@ -12,7 +12,7 @@ from torch.nn import Module
 from torch.optim import Optimizer  # type: ignore
 from torch.optim.lr_scheduler import LRScheduler
 
-from .common import draw_learning_curves, init_logger, remove_file
+from .common import init_logger, remove_file, save_learning_curves
 
 assert load_dotenv(find_dotenv()), "The .env file is missing!"
 
@@ -24,13 +24,13 @@ class Callbacks(StrEnum):
 
     EarlyStopping = "EarlyStopping"
     ModelCheckpoint = "ModelCheckpoint"
-    PlotCheckpoint = "PlotCheckpoint"
+    LearningCurvesCheckpoint = "LearningCurvesCheckpoint"
 
 
 class EarlyStopping:
-    def __init__(self, patience: int = 10, min_delta: float = 0) -> None:
-        self.patience = patience
-        self.min_delta = min_delta
+    def __init__(self, patience: int = 10, min_delta: float = 0.0) -> None:
+        self.patience = int(patience)
+        self.min_delta = float(min_delta)
         self.counter = 0
         self.min_validation_loss = float("inf")
 
@@ -68,8 +68,11 @@ class Checkpoint(metaclass=ABCMeta):
         self.save(*args, **kwargs)
 
     @abstractmethod
-    def save(self) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError
+
+    def load(self) -> None:
+        self.infer_run_storage()
 
     def create_run_storage(self) -> None:
         if self.run_dir is None:
@@ -104,6 +107,7 @@ class ModelCheckpoint(Checkpoint):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.checkpoints_freq = int(checkpoints_freq)
+        self.latest_epoch: int = 0
         self.history: dict[str, list[float]] = dict()
 
     def save(self, history: dict[str, list[float]]) -> None:
@@ -111,13 +115,14 @@ class ModelCheckpoint(Checkpoint):
         if self.run_dir is None:
             raise RuntimeError("Run directory not created.")
 
-        epoch = len(history["loss"])
+        epoch = max((len(lst) for lst in history.values()), default=0)
         if epoch % self.checkpoints_freq == 0:
             checkpoint = Path(f"state_epoch_{epoch:03d}").with_suffix(self.checkpoints_ext)
             current_file = self.run_dir / checkpoint
             logger.debug(f"Saving state to {current_file!s}...")
             torch.save(
                 {
+                    "epoch": epoch,
                     "history": dict(history),
                     "model": self.model.state_dict(),
                     "optimizer": self.optimizer.state_dict(),
@@ -135,6 +140,7 @@ class ModelCheckpoint(Checkpoint):
 
         logger.debug(f"Loading state from {self.latest_file!s}...")
         checkpoint = torch.load(self.latest_file, map_location, weights_only=True)
+        self.latest_epoch = checkpoint["epoch"]
         self.history = checkpoint["history"]
         self.model.load_state_dict(checkpoint["model"])
         self.optimizer.load_state_dict(checkpoint["optimizer"])
@@ -164,18 +170,14 @@ class LearningCurvesCheckpoint(Checkpoint):
         if self.run_dir is None:
             raise RuntimeError("Run directory not created.")
 
-        epoch = len(history["loss"])
+        epoch = max((len(lst) for lst in history.values()), default=0)
         if epoch % self.checkpoints_freq == 0:
             plot_file = Path(f"learning_curves_epoch_{epoch:03d}").with_suffix(self.checkpoints_ext)
             current_file = self.run_dir / plot_file
 
             data = pd.DataFrame(history).rename_axis("epoch").reset_index().assign(epoch=lambda x: x.epoch.add(1))
-            fig = draw_learning_curves(data)
+            save_learning_curves(data, current_file, self.window, self.order)
             logger.debug(f"Saving learning curves to {current_file!s}...")
-            fig.savefig(current_file)
 
             remove_file(self.latest_file)
             self.latest_file = current_file
-
-    def load(self) -> None:
-        super().infer_run_storage()

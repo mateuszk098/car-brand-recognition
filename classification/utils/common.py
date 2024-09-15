@@ -3,11 +3,11 @@ import logging.config
 import os
 from importlib.resources import files
 from logging import Logger
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from pandas import DataFrame
 from scipy.interpolate import CubicSpline
@@ -29,7 +29,7 @@ TRAIN_COLOR = "#4A4B52"
 VAL_COLOR = "#F78A1F"
 
 
-def smooth(x: NDArray, y: NDArray, window: int = 7, order: int = 2) -> tuple[NDArray, NDArray]:
+def smooth(x: NDArray, y: NDArray, window: int = 5, order: int = 2) -> tuple[NDArray, NDArray]:
     if len(y) < window:
         return x, y
     y_filtered = savgol_filter(y, window, order)
@@ -39,30 +39,33 @@ def smooth(x: NDArray, y: NDArray, window: int = 7, order: int = 2) -> tuple[NDA
     return x_new, y_new
 
 
-def draw_learning_curves(data: DataFrame) -> Figure:
-    x_loss, y_loss = smooth(data.epoch.to_numpy(), data.loss.to_numpy())
-    x_val_loss, y_val_loss = smooth(data.epoch.to_numpy(), data.val_loss.to_numpy())
-    x_acc, y_acc = smooth(data.epoch.to_numpy(), data.accuracy.to_numpy())
-    x_val_acc, y_val_acc = smooth(data.epoch.to_numpy(), data.val_accuracy.to_numpy())
+def save_learning_curves(data: DataFrame, path: str | Path, window: int = 5, order: int = 2):
+    x = data.epoch.to_numpy()
+
+    train_loss_x, train_loss_y = smooth(x, data.train_loss.to_numpy(), window, order)
+    val_loss_x, val_loss_y = smooth(x, data.val_loss.to_numpy(), window, order)
+    train_accuracy_x, train_accuracy_y = smooth(x, data.train_accuracy.to_numpy(), window, order)
+    val_accuracy_x, val_accuracy_y = smooth(x, data.val_accuracy.to_numpy(), window, order)
 
     fig = plt.figure(figsize=(9.0, 3.5), tight_layout=True)
 
     plt.subplot(1, 2, 1)
     plt.suptitle(TEXT.format("Training History"))
-    plt.plot(x_loss, y_loss, label=TEXT.format("Train"), color=TRAIN_COLOR)
-    plt.plot(x_val_loss, y_val_loss, label=TEXT.format("Valid"), color=VAL_COLOR)
+    plt.plot(train_loss_x, train_loss_y, label=TEXT.format("Train"), color=TRAIN_COLOR)
+    plt.plot(val_loss_x, val_loss_y, label=TEXT.format("Valid"), color=VAL_COLOR)
     plt.xlabel(TEXT.format("Epoch"))
     plt.ylabel(TEXT.format("Loss"))
     plt.legend()
 
     plt.subplot(1, 2, 2)
-    plt.plot(x_acc, y_acc, label=TEXT.format("Train"), color=TRAIN_COLOR)
-    plt.plot(x_val_acc, y_val_acc, label=TEXT.format("Valid"), color=VAL_COLOR)
+    plt.plot(train_accuracy_x, train_accuracy_y, label=TEXT.format("Train"), color=TRAIN_COLOR)
+    plt.plot(val_accuracy_x, val_accuracy_y, label=TEXT.format("Valid"), color=VAL_COLOR)
     plt.xlabel(TEXT.format("Epoch"))
     plt.ylabel(TEXT.format("Accuracy"))
     plt.legend()
 
-    return fig
+    plt.savefig(path)
+    plt.close(fig)
 
 
 def remove_file(file) -> None:
