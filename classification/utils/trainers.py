@@ -49,7 +49,7 @@ def train_step(
             l1_loss += param.abs().sum()
             l2_loss += param.square().sum()
 
-            if param.grad is not None and param.requires_grad:
+            if param.grad is not None:
                 grads.append(param.grad.detach().cpu().flatten())
 
         model_loss = loss.forward(model.forward(x.to(device)).squeeze(), y.to(device))
