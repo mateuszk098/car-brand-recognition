@@ -1,0 +1,66 @@
+services:
+  mlflow-db:
+    image: postgres:16.4-alpine
+    container_name: mlflow-db
+    ports:
+      - ${POSTGRES_PORT}:5432
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - mlflow-net
+    volumes:
+      - mlflow-metadata:/var/lib/postgresql/data
+
+  mlflow-server:
+    build:
+      dockerfile: mlflow/Dockerfile
+    image: mlflow:v2.16.1
+    container_name: mlflow-server
+    ports:
+      - ${MLFLOW_PORT}:5000
+    networks:
+      - mlflow-net
+    volumes:
+      - mlflow-runs:/home/mlflow/runs
+    depends_on:
+      - mlflow-db
+    entrypoint: 
+      - mlflow
+      - server
+      - --backend-store-uri
+      - postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mlflow-db:5432/${POSTGRES_DB}
+      - --artifacts-destination
+      - file:///home/mlflow/runs
+      - --serve-artifacts
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "5000"
+
+  pgadmin4:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin4
+    ports:
+      - ${PGADMIN_PORT}:80
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    networks:
+      - mlflow-net
+    depends_on:
+      - mlflow-db
+
+volumes:
+  mlflow-metadata:
+    name: mlflow-metadata
+    driver: local
+  mlflow-runs:
+    name: mlflow-runs
+    driver: local
+
+networks:
+  mlflow-net:
+    driver: bridge
+    name: mlflow-net
