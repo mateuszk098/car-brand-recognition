@@ -3,6 +3,7 @@ TRAIN_DATASET: "../data/vehicles/train/"
 VALID_DATASET: "../data/vehicles/valid/"
 BATCH_SIZE: 128
 EPOCHS: 100
+MONITOR: "val_loss"
 PATIENCE: 10
 MIN_DELTA: 1.e-3
 L1_WEIGHT: 2.e-6

@@ -1,3 +1,5 @@
+"""Custom Data Loaders"""
+
 from typing import Any, Callable, Protocol
 
 from numpy.typing import NDArray
@@ -13,6 +15,8 @@ class SupportsTransform(Protocol):
 
 
 class VehicleDataLoader(DataLoader):
+    """DataLoader that supports setting different transforms for training and evaluation."""
+
     def __init__(
         self,
         *args: Any,

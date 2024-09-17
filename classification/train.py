@@ -1,6 +1,7 @@
 import math
 import os
 from argparse import ArgumentParser
+from os import PathLike
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -14,7 +15,7 @@ from torchvision.datasets import ImageFolder
 
 from classification.network.resnet import SeResNet
 from classification.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
-from classification.utils.common import init_logger
+from classification.utils.common import RecordedStats, init_logger
 from classification.utils.loaders import VehicleDataLoader
 from classification.utils.trainers import fit
 from classification.utils.transforms import VehicleTransform
@@ -29,13 +30,13 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger = init_logger(os.getenv("LOGGER"))
 
 
-def load_config(config_file: str | Path) -> dict[str, Any]:
+def load_config(config_file: str | PathLike) -> dict[str, Any]:
     with open(config_file, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     return config
 
 
-def main(*, config_file: str | Path) -> None:
+def main(*, config_file: str | PathLike) -> None:
     logger.info(f"Loading configuration from {config_file!s}...")
     config = SimpleNamespace(**load_config(config_file))
 
@@ -86,7 +87,11 @@ def main(*, config_file: str | Path) -> None:
     )
 
     logger.info("Initializing callbacks...")
-    early_stopping_callback = EarlyStopping(config.PATIENCE, config.MIN_DELTA)
+    early_stopping_callback = EarlyStopping(
+        monitor_value=RecordedStats(config.MONITOR),
+        patience=config.PATIENCE,
+        min_delta=config.MIN_DELTA,
+    )
     model_checkpoint_callback = ModelCheckpoint(
         model,
         optimizer,

@@ -1,3 +1,5 @@
+"""Transforms for vehicle recognition."""
+
 from numpy.typing import NDArray
 from PIL.Image import Image
 from torch import Tensor
@@ -5,6 +7,8 @@ from torchvision import transforms
 
 
 class VehicleTransform:
+    """Trainining and evaluation transforms for vehicle recognition."""
+
     def __init__(
         self,
         size: tuple[int, int],

@@ -1,3 +1,5 @@
+"""Training and validation steps for the model."""
+
 import os
 import time
 from collections import defaultdict
@@ -12,9 +14,8 @@ from torch.optim import Optimizer  # type: ignore
 from torch.optim.lr_scheduler import LRScheduler
 from torcheval.metrics import Metric
 
-from classification.utils.common import init_logger
-
 from .callbacks import Callbacks
+from .common import RecordedStats, init_logger
 from .loaders import VehicleDataLoader
 
 assert load_dotenv(find_dotenv()), "The .env file is missing!"
@@ -140,10 +141,10 @@ def fit(
         train_loss, train_acc = valid_step(model, train_loader, loss, metric, device)
         valid_loss, valid_acc = valid_step(model, valid_loader, loss, metric, device)
 
-        history["train_loss"].append(train_loss)
-        history["train_accuracy"].append(train_acc)
-        history["val_loss"].append(valid_loss)
-        history["val_accuracy"].append(valid_acc)
+        history[RecordedStats.TRAIN_LOSS].append(train_loss)
+        history[RecordedStats.TRAIN_ACCURACY].append(train_acc)
+        history[RecordedStats.VAL_LOSS].append(valid_loss)
+        history[RecordedStats.VAL_ACCURACY].append(valid_acc)
 
         info = log.format(epoch, t1 - t0, train_loss, train_acc, valid_loss, valid_acc)
         logger.info(info)
@@ -154,8 +155,9 @@ def fit(
         if learning_curves_checkpoint_callback is not None:
             learning_curves_checkpoint_callback(history)
 
-        if early_stopping_callback is not None and early_stopping_callback(valid_loss):
-            logger.info("Early Stopping...")
-            break
+        if early_stopping_callback is not None:
+            if early_stopping_callback(history):
+                logger.info("Early Stopping...")
+                break
 
     return history
