@@ -36,7 +36,7 @@ def remove_file(file: str | PathLike) -> None:
 
 def init_logger(name: str | None = None) -> Logger:
     """Initialize a logger with the specified name."""
-    config_path = files("classification.config").joinpath("logging.yaml")
+    config_path = files("network.config").joinpath("logging.yaml")
     with open(str(config_path), "r", encoding="utf-8") as f:
         content = yaml.safe_load(f)
     logging.config.dictConfig(content)

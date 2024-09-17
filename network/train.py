@@ -13,12 +13,12 @@ from dotenv import find_dotenv, load_dotenv
 from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
-from classification.network.resnet import SeResNet
-from classification.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
-from classification.utils.common import RecordedStats, init_logger
-from classification.utils.loaders import VehicleDataLoader
-from classification.utils.trainers import fit
-from classification.utils.transforms import VehicleTransform
+from network.resnet.architectures import SeResNet
+from network.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
+from network.utils.common import RecordedStats, init_logger
+from network.utils.loaders import VehicleDataLoader
+from network.utils.trainers import fit
+from network.utils.transforms import VehicleTransform
 
 assert load_dotenv(find_dotenv()), "The .env file is missing!"
 
