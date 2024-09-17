@@ -95,15 +95,6 @@ class Checkpoint(metaclass=ABCMeta):
         raise NotImplementedError
 
     def load(self) -> None:
-        self.infer_run_storage()
-
-    def create_run_storage(self) -> None:
-        if self.run_dir is None:
-            unique_run = strftime(f"%Y_%m_%d_%H_%M_{self.checkpoints_type}")
-            self.run_dir = self.checkpoints_dir / unique_run
-            self.run_dir.mkdir(parents=True, exist_ok=True)
-
-    def infer_run_storage(self) -> None:
         checkpoints = self.checkpoints_dir.rglob("*" + self.checkpoints_ext)
         latest_file = max(checkpoints, key=os.path.getctime, default=None)
         if latest_file is None:
@@ -111,6 +102,12 @@ class Checkpoint(metaclass=ABCMeta):
 
         self.latest_file = latest_file
         self.run_dir = latest_file.parent
+
+    def create_run_storage(self) -> None:
+        if self.run_dir is None:
+            unique_run = strftime(f"%Y_%m_%d_%H_%M_{self.checkpoints_type}")
+            self.run_dir = self.checkpoints_dir / unique_run
+            self.run_dir.mkdir(parents=True, exist_ok=True)
 
 
 class ModelCheckpoint(Checkpoint):
@@ -160,7 +157,7 @@ class ModelCheckpoint(Checkpoint):
             self.latest_file = current_file
 
     def load(self, map_location: str | torch.device | None = None) -> None:
-        super().infer_run_storage()
+        super().load()
         if self.latest_file is None:
             raise RuntimeError("Cannot infer run storage.")
 
