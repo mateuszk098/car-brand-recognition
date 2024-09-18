@@ -5,6 +5,7 @@ import time
 from collections import defaultdict
 from typing import Any, Callable
 
+import mlflow
 import torch
 import torch.nn as nn
 from dotenv import find_dotenv, load_dotenv
@@ -36,15 +37,15 @@ def train_step(
     model.train()
     loader.train()
 
-    total_model_loss = torch.tensor(0.0)
-    total_grads_norm = torch.tensor(0.0)
-    total_l1_loss = torch.tensor(0.0)
-    total_l2_loss = torch.tensor(0.0)
+    total_model_loss: Tensor = torch.tensor(0.0)
+    total_grads_norm: Tensor = torch.tensor(0.0)
+    total_l1_loss: Tensor = torch.tensor(0.0)
+    total_l2_loss: Tensor = torch.tensor(0.0)
 
     for x, y in loader:
         grads: list[Tensor] = list()
-        l1_loss = torch.tensor(0.0, device=device)
-        l2_loss = torch.tensor(0.0, device=device)
+        l1_loss: Tensor = torch.tensor(0.0, device=device)
+        l2_loss: Tensor = torch.tensor(0.0, device=device)
 
         for param in model.parameters():
             l1_loss += param.abs().sum()
@@ -70,10 +71,10 @@ def train_step(
         optimizer.step()
         scheduler.step()
 
-    mean_model_loss = total_model_loss.item() / len(loader)
-    mean_l1_loss = total_l1_loss.item() / len(loader)
-    mean_l2_loss = total_l2_loss.item() / len(loader)
-    mean_grads_norm = total_grads_norm.item() / len(loader)
+    mean_model_loss: float = total_model_loss.item() / len(loader)
+    mean_l1_loss: float = total_l1_loss.item() / len(loader)
+    mean_l2_loss: float = total_l2_loss.item() / len(loader)
+    mean_grads_norm: float = total_grads_norm.item() / len(loader)
 
     pattern = "Mean Model Loss: {:3.6f} | Mean L1 Loss: {:3.6f} | Mean L2 Loss: {:3.6f} | Grads Norm: {:3.6f}"
     logger.debug(pattern.format(mean_model_loss, mean_l1_loss, mean_l2_loss, mean_grads_norm))
@@ -89,7 +90,7 @@ def valid_step(
     model.eval()
     loader.eval()
     metric.reset()
-    model_loss = torch.tensor(0.0)
+    model_loss: Tensor = torch.tensor(0.0)
 
     with torch.inference_mode():
         for x, y in loader:
@@ -117,7 +118,7 @@ def fit(
     callbacks: dict[Callbacks, Callable[..., Any]] | None = None,
 ) -> dict[str, list[float]]:
 
-    start_epoch = 1
+    start_epoch: int = 1
     history = defaultdict(list)
     log = (
         "Epoch: {:3d} | Train Time: {:3.2f} s | Train Loss: {:6.4f} | "
@@ -145,6 +146,11 @@ def fit(
         history[RecordedStats.TRAIN_ACCURACY].append(train_acc)
         history[RecordedStats.VAL_LOSS].append(valid_loss)
         history[RecordedStats.VAL_ACCURACY].append(valid_acc)
+
+        mlflow.log_metric(RecordedStats.TRAIN_LOSS, train_loss, step=epoch)
+        mlflow.log_metric(RecordedStats.TRAIN_ACCURACY, train_acc, step=epoch)
+        mlflow.log_metric(RecordedStats.VAL_LOSS, valid_loss, step=epoch)
+        mlflow.log_metric(RecordedStats.VAL_ACCURACY, valid_acc, step=epoch)
 
         info = log.format(epoch, t1 - t0, train_loss, train_acc, valid_loss, valid_acc)
         logger.info(info)

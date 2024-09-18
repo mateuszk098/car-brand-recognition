@@ -3,17 +3,23 @@ import os
 from argparse import ArgumentParser
 from os import PathLike
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from typing import Any
 
+import mlflow
+import mlflow.models.signature
+import numpy as np
 import torch
 import torch.nn as nn
 import yaml
 from dotenv import find_dotenv, load_dotenv
+from mlflow.models import ModelSignature
+from mlflow.types import Schema, TensorSpec
 from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
-from network.resnet.architectures import SeResNet
+from network.resnet.architectures import SeResNet, architecture_summary
 from network.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
 from network.utils.common import RecordedStats, init_logger
 from network.utils.loaders import VehicleDataLoader
@@ -25,6 +31,9 @@ assert load_dotenv(find_dotenv()), "The .env file is missing!"
 torch.backends.cudnn.benchmark = True
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
+
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+mlflow.set_experiment("network-training")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger = init_logger(os.getenv("LOGGER"))
@@ -70,7 +79,11 @@ def main(*, config_file: str | PathLike) -> None:
     )
 
     logger.info("Initializing model, loss, metric, optimizer, and scheduler...")
-    model = SeResNet(num_classes=num_classes).to(DEVICE)
+
+    model = SeResNet(num_classes=num_classes)
+    model = model.warmup(torch.randn((10, 3, *config.INPUT_SIZE)))
+    model = model.to(DEVICE)
+
     loss = nn.CrossEntropyLoss()
     metric = metrics.MulticlassAccuracy(average="macro", num_classes=num_classes)
     optimizer = torch.optim.AdamW(model.parameters(), amsgrad=True, fused=True)  # type: ignore
@@ -109,24 +122,39 @@ def main(*, config_file: str | PathLike) -> None:
         logger.info("Resuming training from the latest checkpoint...")
 
     logger.info(f"Start training on {torch.cuda.get_device_name(DEVICE)}...")
-    history = fit(
-        model=model,
-        train_loader=train_loader,
-        valid_loader=valid_loader,
-        loss=loss,
-        metric=metric,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        device=DEVICE,
-        l1_weight=config.L1_WEIGHT,
-        l2_weight=config.L2_WEIGHT,
-        epochs=config.EPOCHS,
-        callbacks={
-            Callbacks.EarlyStopping: early_stopping_callback,
-            Callbacks.ModelCheckpoint: model_checkpoint_callback,
-            Callbacks.LearningCurvesCheckpoint: learning_curves_checkpoint_callback,
-        },
-    )
+
+    with mlflow.start_run():
+        mlflow.log_artifact(str(config_file))
+        mlflow.log_params(vars(config))
+
+        with TemporaryDirectory() as tmp_dir:
+            tmp_f = Path(tmp_dir, "model_summary.txt")
+            tmp_f.write_text(architecture_summary(model))
+            mlflow.log_artifact((str(tmp_f)))
+
+        history = fit(
+            model=model,
+            train_loader=train_loader,
+            valid_loader=valid_loader,
+            loss=loss,
+            metric=metric,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            device=DEVICE,
+            l1_weight=config.L1_WEIGHT,
+            l2_weight=config.L2_WEIGHT,
+            epochs=config.EPOCHS,
+            callbacks={
+                Callbacks.EarlyStopping: early_stopping_callback,
+                Callbacks.ModelCheckpoint: model_checkpoint_callback,
+                Callbacks.LearningCurvesCheckpoint: learning_curves_checkpoint_callback,
+            },
+        )
+
+        input_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, 3, *config.INPUT_SIZE))])
+        output_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, num_classes))])
+        signature = ModelSignature(inputs=input_schema, outputs=output_schema)
+        mlflow.pytorch.log_model(model, "model", signature=signature)
 
 
 if __name__ == "__main__":
