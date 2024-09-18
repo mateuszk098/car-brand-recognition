@@ -7,7 +7,7 @@ from enum import StrEnum, unique
 from importlib.resources import files
 from logging import Logger
 from os import PathLike
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import yaml
 
@@ -34,11 +34,16 @@ def remove_file(file: str | PathLike) -> None:
         pass
 
 
+def load_config(config_file: str | PathLike) -> dict[str, Any]:
+    with open(config_file, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    return config
+
+
 def init_logger(name: str | None = None) -> Logger:
     """Initialize a logger with the specified name."""
-    config_path = files("network.config").joinpath("logging.yaml")
-    with open(str(config_path), "r", encoding="utf-8") as f:
-        content = yaml.safe_load(f)
+    config_file = files("network.config").joinpath("logging.yaml")
+    content = load_config(str(config_file))
     logging.config.dictConfig(content)
     return logging.getLogger(name)
 

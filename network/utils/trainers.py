@@ -95,7 +95,7 @@ def valid_step(
     with torch.inference_mode():
         for x, y in loader:
             x, y = x.to(device), y.to(device)
-            y_logit = model.predict(x).squeeze()
+            y_logit = model.forward(x).squeeze()
             y_proba = torch.softmax(y_logit, dim=-1)
             model_loss += loss.forward(y_logit, y).item()
             metric.update(y_proba, y)

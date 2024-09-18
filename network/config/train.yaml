@@ -1,6 +1,7 @@
-INPUT_SIZE: [224, 224]
+ARCHITECTURE: "medium"
 TRAIN_DATASET: "../data/vehicles/train/"
 VALID_DATASET: "../data/vehicles/valid/"
+METRIC_AVERAGE: "macro"
 BATCH_SIZE: 128
 EPOCHS: 10
 MONITOR: "val_loss"

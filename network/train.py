@@ -1,27 +1,26 @@
 import math
 import os
 from argparse import ArgumentParser
+from importlib.resources import files
 from os import PathLike
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from typing import Any
 
 import mlflow
 import mlflow.models.signature
 import numpy as np
 import torch
 import torch.nn as nn
-import yaml
 from dotenv import find_dotenv, load_dotenv
 from mlflow.models import ModelSignature
 from mlflow.types import Schema, TensorSpec
 from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
-from network.resnet.architectures import SeResNet, architecture_summary
+from network.resnet.architectures import architecture_summary, init_se_resnet
 from network.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
-from network.utils.common import RecordedStats, init_logger
+from network.utils.common import RecordedStats, init_logger, load_config
 from network.utils.loaders import VehicleDataLoader
 from network.utils.trainers import fit
 from network.utils.transforms import VehicleTransform
@@ -39,24 +38,22 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger = init_logger(os.getenv("LOGGER"))
 
 
-def load_config(config_file: str | PathLike) -> dict[str, Any]:
-    with open(config_file, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
-    return config
-
-
 def main(*, config_file: str | PathLike) -> None:
     logger.info(f"Loading configuration from {config_file!s}...")
     config = SimpleNamespace(**load_config(config_file))
 
-    logger.info("Initializing datasets and loaders...")
+    logger.info("Initializing model, datasets and loaders...")
     train_dataset = ImageFolder(config.TRAIN_DATASET)
     valid_dataset = ImageFolder(config.VALID_DATASET)
 
     assert set(train_dataset.classes) == set(valid_dataset.classes)
 
     num_classes = len(train_dataset.classes)
-    transform = VehicleTransform(size=config.INPUT_SIZE)
+    model = init_se_resnet(num_classes, config.ARCHITECTURE)
+    model = model.to(DEVICE)
+
+    input_shape = model.input_shape
+    transform = VehicleTransform(size=input_shape)
 
     train_loader = VehicleDataLoader(
         train_dataset,
@@ -78,14 +75,9 @@ def main(*, config_file: str | PathLike) -> None:
         pin_memory=config.PIN_MEMORY,
     )
 
-    logger.info("Initializing model, loss, metric, optimizer, and scheduler...")
-
-    model = SeResNet(num_classes=num_classes)
-    model = model.warmup(torch.randn((10, 3, *config.INPUT_SIZE)))
-    model = model.to(DEVICE)
-
+    logger.info("Initializing loss, metric, optimizer, and scheduler...")
     loss = nn.CrossEntropyLoss()
-    metric = metrics.MulticlassAccuracy(average="macro", num_classes=num_classes)
+    metric = metrics.MulticlassAccuracy(average=config.METRIC_AVERAGE, num_classes=num_classes)
     optimizer = torch.optim.AdamW(model.parameters(), amsgrad=True, fused=True)  # type: ignore
     scheduler_steps = config.EPOCHS * int(math.ceil(len(train_dataset) / config.BATCH_SIZE))
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -125,6 +117,7 @@ def main(*, config_file: str | PathLike) -> None:
 
     with mlflow.start_run():
         mlflow.log_artifact(str(config_file))
+        mlflow.log_artifact(str(files("network.config").joinpath("arch.yaml")))
         mlflow.log_params(vars(config))
 
         with TemporaryDirectory() as tmp_dir:
@@ -151,7 +144,7 @@ def main(*, config_file: str | PathLike) -> None:
             },
         )
 
-        input_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, 3, *config.INPUT_SIZE))])
+        input_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, 3, *input_shape))])
         output_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, num_classes))])
         signature = ModelSignature(inputs=input_schema, outputs=output_schema)
         mlflow.pytorch.log_model(model, "model", signature=signature)
