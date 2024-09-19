@@ -1,7 +1,6 @@
+from dataclasses import dataclass
 from enum import StrEnum, unique
-from importlib.resources import files
-from types import SimpleNamespace
-from typing import Any, Self
+from typing import Self, TypeAlias
 
 import torch
 import torch.nn as nn
@@ -9,17 +8,45 @@ import torchinfo
 from torch import Tensor
 from torch.nn import Module
 
-from ..utils.common import load_config
+from ..config.files import Files
+from ..utils.common import load_config, retrieve_config_file
 from . import layers
+
+InputType: TypeAlias = tuple[int, int]
+ShrinkageType: TypeAlias = list[
+    tuple[
+        tuple[int, int, int, int],
+        tuple[int, int],
+    ]
+]
+ResidualsType: TypeAlias = list[
+    tuple[
+        tuple[int, int, int, int, bool],
+        tuple[int, int, int, int, bool],
+        tuple[int],
+        tuple[int, int],
+    ]
+]
+NeckType: TypeAlias = list[tuple[int, int]]
+
+
+@dataclass(frozen=True, kw_only=True)
+class SeResNetArch:
+    """Represents the architecture of the Squeeze and Excitation ResNet model."""
+
+    INPUT_SHAPE: InputType
+    SHRINKAGE: ShrinkageType
+    RESIDUALS: ResidualsType
+    NECK: NeckType
 
 
 @unique
 class ArchType(StrEnum):
     """Available architecture types for the Squeeze and Excitation ResNet model."""
 
-    SMALL = "small"
-    MEDIUM = "medium"
-    LARGE = "large"
+    SMALL = "SMALL"
+    MEDIUM = "MEDIUM"
+    LARGE = "LARGE"
 
     @classmethod
     def types(cls) -> set[str]:
@@ -29,7 +56,7 @@ class ArchType(StrEnum):
 class SeResNet(nn.Module):
     """Squeeze and Excitation Residual Network for classification tasks."""
 
-    def __init__(self, num_classes: int, arch: SimpleNamespace) -> None:
+    def __init__(self, num_classes: int, arch: SeResNetArch) -> None:
         super().__init__()
 
         shrinkage = nn.Sequential()
@@ -86,15 +113,11 @@ class SeResNet(nn.Module):
         return self
 
 
-def load_arch() -> dict[str, Any]:
-    config_file = files("network.config").joinpath("arch.yaml")
-    return load_config(str(config_file))
-
-
 def init_se_resnet(num_classes: int, arch_type: str | ArchType, pretrained: bool = False) -> SeResNet:
-    arch_type = ArchType(arch_type).upper()
-    arch = load_arch()[arch_type]
-    model = SeResNet(num_classes, SimpleNamespace(**arch))
+    arch_type = ArchType(arch_type.upper())
+    architectures = load_config(retrieve_config_file(Files.ARCH))
+    arch = SeResNetArch(**architectures[arch_type])
+    model = SeResNet(num_classes, arch)
     return model.warmup()
 
 

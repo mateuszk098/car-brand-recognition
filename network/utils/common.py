@@ -11,6 +11,8 @@ from typing import Any, TypeAlias
 
 import yaml
 
+from ..config.files import FileData, Files
+
 
 @unique
 class RecordedStats(StrEnum):
@@ -40,10 +42,14 @@ def load_config(config_file: str | PathLike) -> dict[str, Any]:
     return config
 
 
+def retrieve_config_file(file: FileData) -> str:
+    """Retrieve the path to the specified configuration file."""
+    return str(files(file.ROOT).joinpath(file.NAME))
+
+
 def init_logger(name: str | None = None) -> Logger:
     """Initialize a logger with the specified name."""
-    config_file = files("network.config").joinpath("logging.yaml")
-    content = load_config(str(config_file))
+    content = load_config(retrieve_config_file(Files.LOGGING))
     logging.config.dictConfig(content)
     return logging.getLogger(name)
 

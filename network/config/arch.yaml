@@ -2,7 +2,6 @@ SMALL:
   INPUT_SHAPE: [224, 224]
   SHRINKAGE: [[[16, 5, 2, 2], [2, 2]]]
   RESIDUALS:
-    # SeResidualBlock, SeResidualBlock, MaxDepthPool2d, MaxPool2d
     [
       [[32, 3, 1, 4, True], [32, 3, 1, 4, True], [2], [2, 2]],
       [[64, 5, 2, 8, True], [64, 5, 1, 8, True], [2], [2, 2]],
