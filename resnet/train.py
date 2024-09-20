@@ -1,7 +1,7 @@
 import math
 import os
 from argparse import ArgumentParser
-from importlib.resources import files
+from dataclasses import asdict
 from os import PathLike
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -18,12 +18,12 @@ from mlflow.types import Schema, TensorSpec
 from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
-from network.resnet.architectures import architecture_summary, init_se_resnet
-from network.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
-from network.utils.common import RecordedStats, init_logger, load_config
-from network.utils.loaders import VehicleDataLoader
-from network.utils.trainers import fit
-from network.utils.transforms import VehicleTransform
+from resnet.network.arch import arch_summary, get_se_resnet_arch, init_se_resnet
+from resnet.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
+from resnet.utils.common import RecordedStats, init_logger, load_config
+from resnet.utils.loaders import VehicleDataLoader
+from resnet.utils.trainers import fit
+from resnet.utils.transforms import eval_transform, train_transform
 
 assert load_dotenv(find_dotenv()), "The .env file is missing!"
 
@@ -48,17 +48,18 @@ def main(*, config_file: str | PathLike) -> None:
 
     assert set(train_dataset.classes) == set(valid_dataset.classes)
 
+    model_arch = get_se_resnet_arch(config.ARCH_TYPE)
     num_classes = len(train_dataset.classes)
-    model = init_se_resnet(num_classes, config.ARCHITECTURE)
-    model = model.to(DEVICE)
+    class_to_idx = train_dataset.class_to_idx
+    input_shape = model_arch.INPUT_SHAPE
 
-    input_shape = model.input_shape
-    transform = VehicleTransform(size=input_shape)
+    model = init_se_resnet(num_classes, model_arch)
+    model = model.to(DEVICE)
 
     train_loader = VehicleDataLoader(
         train_dataset,
-        train_transform=transform.train_transform,
-        eval_transform=transform.eval_transform,
+        train_transform=train_transform(input_shape),
+        eval_transform=eval_transform(input_shape),
         batch_size=config.BATCH_SIZE,
         shuffle=True,
         num_workers=config.NUM_WORKERS,
@@ -67,7 +68,7 @@ def main(*, config_file: str | PathLike) -> None:
     )
     valid_loader = VehicleDataLoader(
         valid_dataset,
-        eval_transform=transform.eval_transform,
+        eval_transform=eval_transform(input_shape),
         batch_size=config.BATCH_SIZE,
         shuffle=False,
         num_workers=config.NUM_WORKERS,
@@ -117,12 +118,13 @@ def main(*, config_file: str | PathLike) -> None:
 
     with mlflow.start_run():
         mlflow.log_artifact(str(config_file))
-        mlflow.log_artifact(str(files("network.config").joinpath("arch.yaml")))
         mlflow.log_params(vars(config))
+        mlflow.log_dict(asdict(model_arch), "architecture.yaml")
+        mlflow.log_dict(class_to_idx, "class_to_idx.yaml")
 
         with TemporaryDirectory() as tmp_dir:
             tmp_f = Path(tmp_dir, "model_summary.txt")
-            tmp_f.write_text(architecture_summary(model))
+            tmp_f.write_text(arch_summary(model))
             mlflow.log_artifact((str(tmp_f)))
 
         history = fit(

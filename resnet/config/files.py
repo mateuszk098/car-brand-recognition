@@ -6,7 +6,7 @@ class FileData:
     """Represents a configuration file."""
 
     NAME: str
-    ROOT: str = "network.config"
+    ROOT: str = "resnet.config"
 
 
 class Files:

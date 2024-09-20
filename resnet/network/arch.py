@@ -113,14 +113,17 @@ class SeResNet(nn.Module):
         return self
 
 
-def init_se_resnet(num_classes: int, arch_type: str | ArchType, pretrained: bool = False) -> SeResNet:
+def get_se_resnet_arch(arch_type: str | ArchType) -> SeResNetArch:
     arch_type = ArchType(arch_type.upper())
     architectures = load_config(retrieve_config_file(Files.ARCH))
-    arch = SeResNetArch(**architectures[arch_type])
+    return SeResNetArch(**architectures[arch_type])
+
+
+def init_se_resnet(num_classes: int, arch: SeResNetArch, pretrained: bool = False) -> SeResNet:
     model = SeResNet(num_classes, arch)
     return model.warmup()
 
 
-def architecture_summary(model: Module) -> str:
+def arch_summary(model: Module) -> str:
     """Returns the architecture summary of the model."""
     return str(torchinfo.summary(model, verbose=0, depth=4))
