@@ -1,4 +1,4 @@
-SMALL:
+SeResNet2SR:
   INPUT_SHAPE: [224, 224]
   SHRINKAGE: [[[16, 5, 2, 2], [2, 2]]]
   RESIDUALS:
@@ -7,7 +7,7 @@ SMALL:
       [[64, 5, 2, 8, True], [64, 5, 1, 8, True], [2], [2, 2]],
     ]
   NECK: [[256, 0.5], [128, 0.25]]
-MEDIUM:
+SeResNet3SR:
   INPUT_SHAPE: [224, 224]
   SHRINKAGE: [[[32, 5, 2, 2], [2, 2]]]
   RESIDUALS:
@@ -17,7 +17,7 @@ MEDIUM:
       [[128, 3, 1, 8, True], [128, 3, 1, 8, True], [4], [2, 2]],
     ]
   NECK: [[512, 0.5], [256, 0.25]]
-LARGE:
+SeResNet4SR:
   INPUT_SHAPE: [448, 448]
   SHRINKAGE: [[[32, 5, 2, 2], [2, 2]]]
   RESIDUALS:

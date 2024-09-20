@@ -44,9 +44,9 @@ class SeResNetArch:
 class ArchType(StrEnum):
     """Available architecture types for the Squeeze and Excitation ResNet model."""
 
-    SMALL = "SMALL"
-    MEDIUM = "MEDIUM"
-    LARGE = "LARGE"
+    SeResNet2SR = "SeResNet2SR"
+    SeResNet3SR = "SeResNet3SR"
+    SeResNet4SR = "SeResNet4SR"
 
     @classmethod
     def types(cls) -> set[str]:
@@ -114,12 +114,12 @@ class SeResNet(nn.Module):
 
 
 def get_se_resnet_arch(arch_type: str | ArchType) -> SeResNetArch:
-    arch_type = ArchType(arch_type.upper())
+    arch_type = ArchType(arch_type)
     architectures = load_config(retrieve_config_file(Files.ARCH))
-    return SeResNetArch(**architectures[arch_type])
+    return SeResNetArch(**architectures[arch_type.value])
 
 
-def init_se_resnet(num_classes: int, arch: SeResNetArch, pretrained: bool = False) -> SeResNet:
+def init_se_resnet(num_classes: int, arch: SeResNetArch) -> SeResNet:
     model = SeResNet(num_classes, arch)
     return model.warmup()
 
