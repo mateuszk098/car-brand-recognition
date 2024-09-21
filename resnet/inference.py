@@ -1,3 +1,4 @@
+from functools import lru_cache
 from os import PathLike
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from torch import Tensor
 from resnet.network.arch import ArchType, SeResNet, get_se_resnet_arch, init_se_resnet
 from resnet.utils.transforms import eval_transform
 
-PRETRAINED_URLS = {
+PRETRAINED_URLS: dict[ArchType, str] = {
     ArchType.SeResNet2SR: "",
     ArchType.SeResNet3SR: "https://drive.google.com/uc?export=download&id=1Z_2117kTcOljktYtG9zd69gtyE_KQfnj",
     ArchType.SeResNet2SR: "",
@@ -34,10 +35,12 @@ def download_pretrained_weights(arch_type: str | ArchType) -> PathLike:
     return weights_file
 
 
-def load_se_resnet(arch_type: str | ArchType) -> SeResNet:
+@lru_cache(maxsize=1)
+def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | None = None) -> SeResNet:
     arch_type = ArchType(arch_type)
     model = init_se_resnet(len(CLASS_TO_IDX), get_se_resnet_arch(arch_type))
-    weights_file = download_pretrained_weights(arch_type)
+    if weights_file is None:
+        weights_file = download_pretrained_weights(arch_type)
     weights = torch.load(weights_file, map_location=torch.device("cpu"), weights_only=True)
     model.load_state_dict(weights)
     return model.eval()

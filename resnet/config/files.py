@@ -15,3 +15,4 @@ class Files:
     ARCH: FileData = FileData(NAME="arch.yaml")
     LOGGING: FileData = FileData(NAME="logging.yaml")
     TRAIN: FileData = FileData(NAME="train.yaml")
+    EVAL: FileData = FileData(NAME="eval.yaml")
