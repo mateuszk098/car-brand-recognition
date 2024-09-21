@@ -59,15 +59,14 @@ class EarlyStopping:
         current_values = history[self.monitor_value]
         current_value = 0.0 if not current_values else current_values[-1]
 
-        if current_value < self.min_value:
+        if current_value < self.min_value - self.min_delta:
             self.min_value = current_value
             self.counter = 0
             return False
 
-        if current_value > self.min_value + self.min_delta:
-            self.counter += 1
-            if self.counter >= self.patience:
-                return True
+        self.counter += 1
+        if self.counter == self.patience:
+            return True
 
         return False
 

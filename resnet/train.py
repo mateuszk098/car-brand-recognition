@@ -85,6 +85,8 @@ def main(*, config_file: str | PathLike) -> None:
         optimizer,
         max_lr=config.MAX_LR,
         div_factor=config.DIV_FACTOR,
+        final_div_factor=config.FINAL_DIV_FACTOR,
+        three_phase=config.THREE_PHASE,
         total_steps=scheduler_steps,
         anneal_strategy=config.ANNEAL_STRATEGY,
         cycle_momentum=config.CYCLE_MOMENTUM,
