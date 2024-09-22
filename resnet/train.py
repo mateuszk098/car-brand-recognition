@@ -13,10 +13,10 @@ import mlflow.models.signature
 import numpy as np
 import torch
 import torch.nn as nn
+import torchmetrics.classification as metrics
 from dotenv import find_dotenv, load_dotenv
 from mlflow.models import ModelSignature
 from mlflow.types import Schema, TensorSpec
-from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
 from resnet.network.arch import arch_summary, init_se_resnet
@@ -79,6 +79,7 @@ def main(*, config_file: str | PathLike) -> None:
     logger.info("Initializing loss, metric, optimizer, and scheduler...")
     loss = nn.CrossEntropyLoss()
     metric = metrics.MulticlassAccuracy(average=config.METRIC_AVERAGE, num_classes=num_classes)
+    metric = metric.to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), amsgrad=True, fused=True)  # type: ignore
     scheduler_steps = config.EPOCHS * int(math.ceil(len(train_dataset) / config.BATCH_SIZE))
     scheduler = torch.optim.lr_scheduler.OneCycleLR(

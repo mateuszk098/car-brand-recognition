@@ -8,11 +8,11 @@ from types import SimpleNamespace
 
 import torch
 import torch.nn as nn
+import torchmetrics.classification as metrics
 from dotenv import find_dotenv, load_dotenv
 from numpy.typing import NDArray
 from torch import Tensor
 from torch.nn import Module
-from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
 from resnet.inference import load_se_resnet
@@ -27,7 +27,6 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 @dataclass(frozen=True, kw_only=True)
 class EvaluationResult:
-    Throughput: int
     Loss: float
     Accuracy: float
     Precision: float
@@ -44,25 +43,18 @@ def evaluate(model: Module, loader: VehicleDataLoader, average: str = "macro") -
     num_classes = len(loader.dataset.classes)  # type: ignore
 
     loss = nn.CrossEntropyLoss()
-    throughput = metrics.Throughput()
-    accuracy = metrics.MulticlassAccuracy(average=average, num_classes=num_classes)
-    precision = metrics.MulticlassPrecision(average=average, num_classes=num_classes)
-    recall = metrics.MulticlassRecall(average=average, num_classes=num_classes)
-    f1_score = metrics.MulticlassF1Score(average=average, num_classes=num_classes)
-    confusion_matrix = metrics.MulticlassConfusionMatrix(num_classes=num_classes)
+    accuracy = metrics.MulticlassAccuracy(average=average, num_classes=num_classes).to(DEVICE)
+    precision = metrics.MulticlassPrecision(average=average, num_classes=num_classes).to(DEVICE)
+    recall = metrics.MulticlassRecall(average=average, num_classes=num_classes).to(DEVICE)
+    f1_score = metrics.MulticlassF1Score(average=average, num_classes=num_classes).to(DEVICE)
+    confusion_matrix = metrics.MulticlassConfusionMatrix(num_classes=num_classes).to(DEVICE)
 
     with torch.inference_mode():
         for x, y in loader:
             x, y = x.to(DEVICE), y.to(DEVICE)
-
-            ts = time.perf_counter()
             y_logit = model.forward(x).squeeze()
-            te = time.perf_counter()
-
             y_proba = torch.softmax(y_logit, dim=-1)
             model_loss += loss.forward(y_logit, y).item()
-
-            throughput.update(len(y), te - ts)
             accuracy.update(y_proba, y)
             precision.update(y_proba, y)
             recall.update(y_proba, y)
@@ -70,13 +62,12 @@ def evaluate(model: Module, loader: VehicleDataLoader, average: str = "macro") -
             confusion_matrix.update(y_proba, y)
 
     return EvaluationResult(
-        Throughput=int(throughput.compute()),
         Loss=model_loss.item() / len(loader),
         Accuracy=accuracy.compute().item(),
         Precision=precision.compute().item(),
         Recall=recall.compute().item(),
         F1Score=f1_score.compute().item(),
-        ConfusionMatrix=confusion_matrix.compute().numpy().astype(int),
+        ConfusionMatrix=confusion_matrix.compute().cpu().numpy().astype(int),
     )
 
 
@@ -99,12 +90,9 @@ def main(*, config_file: str | PathLike) -> None:
     res = evaluate(model, valid_loader, config.METRIC_AVERAGE)
 
     cm = "\n".join(str(row) for row in res.ConfusionMatrix.tolist())
-    log = (
-        "Throughput: {:5d} img/s | Accuracy: {:4.2%} | Precision: {:4.2%} | "
-        "Recall: {:4.2%} | F1 Score: {:4.2%} | Loss {:6.4f}"
-    )
+    log = "Accuracy: {:4.2%} | Precision: {:4.2%} | " "Recall: {:4.2%} | F1 Score: {:4.2%} | Loss {:6.4f}"
 
-    logger.info(log.format(res.Throughput, res.Accuracy, res.Precision, res.Recall, res.F1Score, res.Loss))
+    logger.info(log.format(res.Accuracy, res.Precision, res.Recall, res.F1Score, res.Loss))
     logger.info(f"Confusion Matrix:\n{cm}")
 
 

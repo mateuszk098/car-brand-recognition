@@ -13,7 +13,7 @@ from torch import Tensor
 from torch.nn import Module
 from torch.optim import Optimizer  # type: ignore
 from torch.optim.lr_scheduler import LRScheduler
-from torcheval.metrics import Metric
+from torchmetrics import Metric
 
 from .callbacks import Callbacks
 from .common import RecordedStats, init_logger
