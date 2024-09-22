@@ -1,4 +1,5 @@
 from functools import lru_cache
+from inspect import signature
 from os import PathLike
 from pathlib import Path
 
@@ -29,15 +30,13 @@ CLASS_TO_IDX: dict[str, int] = {
 }
 
 
-def download_pretrained_weights(arch_type: str | ArchType) -> PathLike:
-    arch_type = ArchType(arch_type)
-    weights_file = Path(f"{arch_type.lower()}-weights").with_suffix(".pt")
-    if not weights_file.is_file():
-        gdown.download(PRETRAINED_URLS[arch_type], str(weights_file), quiet=False)
-    return weights_file
+def model_cache(func):
+    wrapper = lru_cache(maxsize=1)(func)
+    wrapper.__signature__ = signature(func)
+    return wrapper
 
 
-@lru_cache(maxsize=1)
+@model_cache
 def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | None = None) -> SeResNet:
     model = init_se_resnet(arch_type, len(CLASS_TO_IDX))
     if weights_file is None:
@@ -45,6 +44,14 @@ def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | Non
     weights = torch.load(weights_file, map_location=torch.device("cpu"), weights_only=True)
     model.load_state_dict(weights)
     return model.eval()
+
+
+def download_pretrained_weights(arch_type: str | ArchType) -> PathLike:
+    arch_type = ArchType(arch_type)
+    weights_file = Path(f"{arch_type.lower()}-weights").with_suffix(".pt")
+    if not weights_file.is_file():
+        gdown.download(PRETRAINED_URLS[arch_type], str(weights_file), quiet=False)
+    return weights_file
 
 
 def predict(image: ArrayLike, model: SeResNet, topk: int = 5) -> list[dict[str, float]]:
