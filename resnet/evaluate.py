@@ -91,7 +91,7 @@ def main(*, config_file: str | PathLike) -> None:
 
     valid_loader = VehicleDataLoader(
         valid_dataset,
-        eval_transform=eval_transform(model.input_shape),
+        eval_transform=eval_transform(model.architecture.INPUT_SHAPE),
         batch_size=config.BATCH_SIZE,
         shuffle=False,
     )

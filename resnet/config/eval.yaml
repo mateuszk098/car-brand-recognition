@@ -1,5 +1,5 @@
 ARCH_TYPE: "SeResNet3SR"
-WEIGHTS_FILE: "./checkpoints/seresnet3sr-weights.pt"
+WEIGHTS_FILE: "../notes/weights.pt"
 VALID_DATASET: "../data/vehicles/valid/"
 METRIC_AVERAGE: "macro"
 BATCH_SIZE: 128
