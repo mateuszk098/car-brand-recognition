@@ -5,6 +5,7 @@ from dataclasses import asdict
 from os import PathLike
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from time import strftime
 from types import SimpleNamespace
 
 import mlflow
@@ -146,6 +147,10 @@ def main(*, config_file: str | PathLike) -> None:
                 Callbacks.LearningCurvesCheckpoint: learning_curves_checkpoint_callback,
             },
         )
+
+        final_model_id = Path(strftime(f"{config.ARCH_TYPE}_%H_%M_%S_%d_%m_%Y")).with_suffix(".pt")
+        logger.info(f"Training completed, saving the final model to {final_model_id!s}...")
+        torch.save(model.state_dict(), final_model_id)
 
         input_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, 3, *input_shape))])
         output_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, num_classes))])
