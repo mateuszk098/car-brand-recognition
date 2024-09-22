@@ -8,22 +8,24 @@ import torch
 from numpy.typing import ArrayLike
 from torch import Tensor
 
-from resnet.network.arch import ArchType, SeResNet, get_se_resnet_arch, init_se_resnet
+from resnet.network.arch import ArchType, SeResNet, init_se_resnet
 from resnet.utils.transforms import eval_transform
 
 PRETRAINED_URLS: dict[ArchType, str] = {
     ArchType.SeResNet2SR: "",
-    ArchType.SeResNet3SR: "https://drive.google.com/uc?export=download&id=1Z_2117kTcOljktYtG9zd69gtyE_KQfnj",
+    ArchType.SeResNet3SR: "",
     ArchType.SeResNet2SR: "",
 }
 
 CLASS_TO_IDX: dict[str, int] = {
     "Bike": 0,
-    "Car": 1,
-    "Motorcycle": 2,
-    "Plane": 3,
-    "Ship": 4,
-    "Train": 5,
+    "Bus": 1,
+    "Car": 2,
+    "Motorcycle": 3,
+    "Plane": 4,
+    "Ship": 5,
+    "Train": 6,
+    "Truck": 7,
 }
 
 
@@ -37,8 +39,7 @@ def download_pretrained_weights(arch_type: str | ArchType) -> PathLike:
 
 @lru_cache(maxsize=1)
 def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | None = None) -> SeResNet:
-    arch_type = ArchType(arch_type)
-    model = init_se_resnet(len(CLASS_TO_IDX), get_se_resnet_arch(arch_type))
+    model = init_se_resnet(arch_type, len(CLASS_TO_IDX))
     if weights_file is None:
         weights_file = download_pretrained_weights(arch_type)
     weights = torch.load(weights_file, map_location=torch.device("cpu"), weights_only=True)
@@ -47,7 +48,7 @@ def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | Non
 
 
 def predict(image: ArrayLike, model: SeResNet, topk: int = 5) -> list[dict[str, float]]:
-    processed_img = preprocess(image, model.input_shape)
+    processed_img = preprocess(image, model.architecture.INPUT_SHAPE)
     processed_img = processed_img.unsqueeze(0)
     with torch.inference_mode():
         logits = model(processed_img)

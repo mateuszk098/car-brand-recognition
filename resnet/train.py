@@ -18,7 +18,7 @@ from mlflow.types import Schema, TensorSpec
 from torcheval import metrics
 from torchvision.datasets import ImageFolder
 
-from resnet.network.arch import arch_summary, get_se_resnet_arch, init_se_resnet
+from resnet.network.arch import arch_summary, init_se_resnet
 from resnet.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
 from resnet.utils.common import RecordedStats, init_logger, load_config
 from resnet.utils.loaders import VehicleDataLoader
@@ -48,13 +48,12 @@ def main(*, config_file: str | PathLike) -> None:
 
     assert set(train_dataset.classes) == set(valid_dataset.classes)
 
-    model_arch = get_se_resnet_arch(config.ARCH_TYPE)
     num_classes = len(train_dataset.classes)
-    class_to_idx = train_dataset.class_to_idx
-    input_shape = model_arch.INPUT_SHAPE
+    class_to_id = train_dataset.class_to_idx
 
-    model = init_se_resnet(num_classes, model_arch)
+    model = init_se_resnet(config.ARCH_TYPE, num_classes)
     model = model.to(DEVICE)
+    input_shape = model.architecture.INPUT_SHAPE
 
     train_loader = VehicleDataLoader(
         train_dataset,
@@ -121,8 +120,8 @@ def main(*, config_file: str | PathLike) -> None:
     with mlflow.start_run():
         mlflow.log_artifact(str(config_file))
         mlflow.log_params(vars(config))
-        mlflow.log_dict(asdict(model_arch), "architecture.yaml")
-        mlflow.log_dict(class_to_idx, "class_to_idx.yaml")
+        mlflow.log_dict(asdict(model.architecture), "architecture.yaml")
+        mlflow.log_dict(class_to_id, "class_to_idx.yaml")
 
         with TemporaryDirectory() as tmp_dir:
             tmp_f = Path(tmp_dir, "model_summary.txt")

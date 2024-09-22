@@ -58,6 +58,7 @@ class SeResNet(nn.Module):
 
     def __init__(self, num_classes: int, arch: SeResNetArch) -> None:
         super().__init__()
+        self._architecture = arch
 
         shrinkage = nn.Sequential()
         residuals = nn.Sequential()
@@ -95,12 +96,11 @@ class SeResNet(nn.Module):
                 ),
             )
 
-        self._input_shape = arch.INPUT_SHAPE
         self.feed_forward = nn.Sequential(shrinkage, residuals, flatten, neck, classifier)
 
     @property
-    def input_shape(self) -> tuple[int, int]:
-        return self._input_shape
+    def architecture(self) -> SeResNetArch:
+        return self._architecture
 
     def __call__(self, x: Tensor) -> Tensor:
         return self.feed_forward(x)
@@ -109,18 +109,20 @@ class SeResNet(nn.Module):
         return self.feed_forward(x)
 
     def warmup(self) -> Self:
-        self.feed_forward(torch.randn(10, 3, *self.input_shape))
+        input_shape = self.architecture.INPUT_SHAPE
+        x = torch.randn(10, 3, *input_shape, generator=torch.manual_seed(42))
+        self.feed_forward(x)
         return self
 
 
-def get_se_resnet_arch(arch_type: str | ArchType) -> SeResNetArch:
-    arch_type = ArchType(arch_type)
+def get_se_resnet_arch(arch_type: ArchType) -> SeResNetArch:
     architectures = load_config(retrieve_config_file(Files.ARCH))
     return SeResNetArch(**architectures[arch_type.value])
 
 
-def init_se_resnet(num_classes: int, arch: SeResNetArch) -> SeResNet:
-    model = SeResNet(num_classes, arch)
+def init_se_resnet(arch_type: str | ArchType, num_classes: int) -> SeResNet:
+    arch_type = ArchType(arch_type)
+    model = SeResNet(num_classes, get_se_resnet_arch(arch_type))
     return model.warmup()
 
 

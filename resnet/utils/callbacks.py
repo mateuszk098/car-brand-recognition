@@ -74,17 +74,14 @@ class EarlyStopping:
 class Checkpoint(metaclass=ABCMeta):
     """Abstract base class for saving and loading checkpoints."""
 
-    def __init__(
-        self,
-        checkpoints_ext: str,
-        checkpoints_type: str,
-        checkpoints_dir: str | PathLike,
-    ) -> None:
-        self.checkpoints_ext = str(checkpoints_ext)
-        self.checkpoints_type = str(checkpoints_type)
+    _run_dir: PathLike | None = None
+
+    def __init__(self, checkpoints_dir: str | PathLike, checkpoints_freq: int, checkpoints_ext: str) -> None:
         self.checkpoints_dir = Path(checkpoints_dir)
-        self.run_dir: PathLike | None = None
+        self.checkpoints_freq = int(checkpoints_freq)
+        self.checkpoints_ext = str(checkpoints_ext)
         self.latest_file: PathLike | None = None
+        self.run_dir: PathLike | None = None
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         self.save(*args, **kwargs)
@@ -93,20 +90,18 @@ class Checkpoint(metaclass=ABCMeta):
     def save(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError
 
-    def load(self) -> None:
-        checkpoints = self.checkpoints_dir.rglob("*" + self.checkpoints_ext)
-        latest_file = max(checkpoints, key=os.path.getctime, default=None)
-        if latest_file is None:
-            raise FileNotFoundError(f"No checkpoints found in {self.checkpoints_dir!s}")
+    def load(self) -> PathLike:
+        latest_run_dir = infer_latest_dir(self.checkpoints_dir)
+        if latest_run_dir is None:
+            raise FileNotFoundError(f"No runs found in {self.checkpoints_dir!s}")
+        Checkpoint._run_dir = latest_run_dir
+        return Checkpoint._run_dir
 
-        self.latest_file = latest_file
-        self.run_dir = latest_file.parent
-
-    def create_run_storage(self) -> None:
-        if self.run_dir is None:
-            unique_run = strftime(f"%Y_%m_%d_%H_%M_{self.checkpoints_type}")
-            self.run_dir = self.checkpoints_dir / unique_run
-            self.run_dir.mkdir(parents=True, exist_ok=True)
+    def create_run(self) -> PathLike:
+        if Checkpoint._run_dir is None:
+            Checkpoint._run_dir = self.checkpoints_dir / strftime(f"run_%H_%M_%S_%d_%m_%Y")
+            Checkpoint._run_dir.mkdir(parents=True, exist_ok=True)
+        return Checkpoint._run_dir
 
 
 class ModelCheckpoint(Checkpoint):
@@ -117,29 +112,27 @@ class ModelCheckpoint(Checkpoint):
         model: Module,
         optimizer: Optimizer,
         scheduler: LRScheduler,
-        checkpoints_freq: int = 1,
         checkpoints_dir: str | PathLike = "./checkpoints/",
+        checkpoints_freq: int = 1,
     ) -> None:
-        checkpoints_type = "states"
-        checkpoints_ext = ".tar"
-        super().__init__(checkpoints_ext, checkpoints_type, checkpoints_dir)
+        super().__init__(checkpoints_dir, checkpoints_freq, ".tar")
+        Checkpoint._run_dir = None
 
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.checkpoints_freq = int(checkpoints_freq)
         self.latest_epoch: int = 0
         self.history: History = dict()
 
     def save(self, history: History) -> None:
-        super().create_run_storage()
         if self.run_dir is None:
-            raise RuntimeError("Run directory not created.")
+            self.run_dir = super().create_run()
 
         epoch = max((len(lst) for lst in history.values()), default=0)
         if epoch % self.checkpoints_freq == 0:
             checkpoint = Path(f"state_epoch_{epoch:03d}").with_suffix(self.checkpoints_ext)
             current_file = self.run_dir / checkpoint
+
             logger.debug(f"Saving state to {current_file!s}...")
             torch.save(
                 {
@@ -151,17 +144,20 @@ class ModelCheckpoint(Checkpoint):
                 },
                 current_file,
             )
-            if self.latest_file is not None:
+
+            if self.latest_file is not None and current_file != self.latest_file:
                 remove_file(self.latest_file)
             self.latest_file = current_file
 
     def load(self, map_location: str | torch.device | None = None) -> None:
-        super().load()
+        self.run_dir = super().load()
+        self.latest_file = infer_latest_file(self.run_dir, self.checkpoints_ext)
         if self.latest_file is None:
-            raise RuntimeError("Cannot infer run storage.")
+            raise RuntimeError("Run directory is empty.")
 
         logger.debug(f"Loading state from {self.latest_file!s}...")
         checkpoint = torch.load(self.latest_file, map_location, weights_only=True)
+
         self.latest_epoch = checkpoint["epoch"]
         self.history = checkpoint["history"]
         self.model.load_state_dict(checkpoint["model"])
@@ -177,31 +173,50 @@ class LearningCurvesCheckpoint(Checkpoint):
         smooth_out: bool = True,
         window: int = 5,
         order: int = 2,
-        checkpoints_freq: int = 1,
         checkpoints_dir: str | PathLike = "./checkpoints/",
+        checkpoints_freq: int = 1,
     ) -> None:
-        checkpoints_type = "plots"
-        checkpoints_ext = ".png"
-        super().__init__(checkpoints_ext, checkpoints_type, checkpoints_dir)
+        super().__init__(checkpoints_dir, checkpoints_freq, ".png")
+        Checkpoint._run_dir = None
 
         self.smooth_out = bool(smooth_out)
         self.window = int(window)
         self.order = int(order)
-        self.checkpoints_freq = int(checkpoints_freq)
 
     def save(self, history: History) -> None:
-        super().create_run_storage()
         if self.run_dir is None:
-            raise RuntimeError("Run directory not created.")
+            self.run_dir = super().create_run()
 
         epoch = max((len(lst) for lst in history.values()), default=0)
         if epoch % self.checkpoints_freq == 0:
-            plot_file = Path(f"learning_curves_epoch_{epoch:03d}").with_suffix(self.checkpoints_ext)
-            current_file = self.run_dir / plot_file
+            plot = Path(f"learning_curves_epoch_{epoch:03d}").with_suffix(self.checkpoints_ext)
+            current_file = self.run_dir / plot
 
-            save_learning_curves(history, current_file, self.window, self.order)
             logger.debug(f"Saving learning curves to {current_file!s}...")
+            save_learning_curves(history, current_file, self.window, self.order)
 
-            if self.latest_file is not None:
+            if self.latest_file is not None and current_file != self.latest_file:
                 remove_file(self.latest_file)
             self.latest_file = current_file
+
+    def load(self) -> None:
+        self.run_dir = super().load()
+        self.latest_file = infer_latest_file(self.run_dir, self.checkpoints_ext)
+
+
+def infer_latest_dir(directory) -> PathLike | None:
+    dirs = (d for d in directory.glob("*") if d.is_dir())
+    return max(dirs, key=os.path.getctime, default=None)
+
+
+def infer_latest_file(directory, ext: str | None = None) -> PathLike | None:
+    if ext is not None and is_valid_ext(ext):
+        files = (f for f in directory.glob("*") if f.is_file() and f.suffix == ext)
+    else:
+        files = (f for f in directory.glob("*") if f.is_file())
+    return max(files, key=os.path.getctime, default=None)
+
+
+def is_valid_ext(ext: str) -> bool:
+    ext = str(ext)
+    return ext.startswith(".") and len(ext) > 1
