@@ -1,3 +1,5 @@
+"""Lazy layers for Squeeze and Excitation ResNet network."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -81,7 +83,7 @@ class LazyResidualBlock(nn.Module):
         return shortcut_connection
 
 
-class LazySeResidualBlock(nn.Module):
+class LazySEResidualBlock(nn.Module):
     """Lazy residual connection with squeeze and excitation block."""
 
     def __init__(

@@ -6,7 +6,7 @@ from enum import StrEnum, unique
 from os import PathLike
 from pathlib import Path
 from time import strftime
-from typing import Any
+from typing import Any, ClassVar
 
 import torch
 from dotenv import find_dotenv, load_dotenv
@@ -18,10 +18,9 @@ from .common import History, RecordedStats, init_logger, remove_file
 from .visualize import save_learning_curves
 
 assert load_dotenv(find_dotenv()), "The .env file is missing!"
+logger = init_logger(os.getenv("LOGGER"))
 
 torch.serialization.add_safe_globals([RecordedStats])
-
-logger = init_logger(os.getenv("LOGGER"))
 
 
 @unique
@@ -33,8 +32,8 @@ class Callbacks(StrEnum):
     LearningCurvesCheckpoint = "LearningCurvesCheckpoint"
 
     @classmethod
-    def keys(cls) -> set[str]:
-        return set(key.value for key in cls)
+    def content(cls) -> set[str]:
+        return set(member for member in cls)
 
 
 class EarlyStopping:
@@ -56,6 +55,9 @@ class EarlyStopping:
         return self.should_stop(history)
 
     def should_stop(self, history: History) -> bool:
+        """Returns True if there is no significant improvement (`min_delta`)
+        in the monitored value by the last `patience` epochs. Otherwise, returns False."""
+
         current_values = history[self.monitor_value]
         current_value = 0.0 if not current_values else current_values[-1]
 
@@ -74,7 +76,7 @@ class EarlyStopping:
 class Checkpoint(metaclass=ABCMeta):
     """Abstract base class for saving and loading checkpoints."""
 
-    _run_dir: PathLike | None = None
+    _run_dir: ClassVar[PathLike | None] = None
 
     def __init__(self, checkpoints_dir: str | PathLike, checkpoints_freq: int, checkpoints_ext: str) -> None:
         self.checkpoints_dir = Path(checkpoints_dir)
@@ -91,6 +93,7 @@ class Checkpoint(metaclass=ABCMeta):
         raise NotImplementedError
 
     def load(self) -> PathLike:
+        """Returns the latest run directory."""
         latest_run_dir = infer_latest_dir(self.checkpoints_dir)
         if latest_run_dir is None:
             raise FileNotFoundError(f"No runs found in {self.checkpoints_dir!s}")
@@ -98,6 +101,7 @@ class Checkpoint(metaclass=ABCMeta):
         return Checkpoint._run_dir
 
     def create_run(self) -> PathLike:
+        """Creates a new run directory and returns its path."""
         if Checkpoint._run_dir is None:
             Checkpoint._run_dir = self.checkpoints_dir / strftime(f"run_%H_%M_%S_%d_%m_%Y")
             Checkpoint._run_dir.mkdir(parents=True, exist_ok=True)
@@ -125,6 +129,7 @@ class ModelCheckpoint(Checkpoint):
         self.history: History = dict()
 
     def save(self, history: History) -> None:
+        """Saves the model, optimizer and scheduler states along with the history to the run directory."""
         if self.run_dir is None:
             self.run_dir = super().create_run()
 
@@ -150,6 +155,9 @@ class ModelCheckpoint(Checkpoint):
             self.latest_file = current_file
 
     def load(self, map_location: str | torch.device | None = None) -> None:
+        """Infer the latest run directory and file. Loads the latest model, optimizer
+        and scheduler states along with history from the run directory."""
+
         self.run_dir = super().load()
         self.latest_file = infer_latest_file(self.run_dir, self.checkpoints_ext)
         if self.latest_file is None:
@@ -184,6 +192,7 @@ class LearningCurvesCheckpoint(Checkpoint):
         self.order = int(order)
 
     def save(self, history: History) -> None:
+        """Saves the learning curves to the run directory."""
         if self.run_dir is None:
             self.run_dir = super().create_run()
 
@@ -200,16 +209,19 @@ class LearningCurvesCheckpoint(Checkpoint):
             self.latest_file = current_file
 
     def load(self) -> None:
+        """Infer the latest run directory and file."""
         self.run_dir = super().load()
         self.latest_file = infer_latest_file(self.run_dir, self.checkpoints_ext)
 
 
 def infer_latest_dir(directory) -> PathLike | None:
+    """Returns the latest created subdirectory in the given directory."""
     dirs = (d for d in directory.glob("*") if d.is_dir())
     return max(dirs, key=os.path.getctime, default=None)
 
 
 def infer_latest_file(directory, ext: str | None = None) -> PathLike | None:
+    """Returns the latest created file with given extension in the given directory."""
     if ext is not None and is_valid_ext(ext):
         files = (f for f in directory.glob("*") if f.is_file() and f.suffix == ext)
     else:
@@ -218,5 +230,6 @@ def infer_latest_file(directory, ext: str | None = None) -> PathLike | None:
 
 
 def is_valid_ext(ext: str) -> bool:
+    """Checks if the given file extension is valid."""
     ext = str(ext)
     return ext.startswith(".") and len(ext) > 1

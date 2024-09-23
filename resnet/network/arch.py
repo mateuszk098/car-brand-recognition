@@ -1,6 +1,8 @@
+"""Squeeze and Excitation ResNet architecture for classification tasks."""
+
 from dataclasses import dataclass
 from enum import StrEnum, unique
-from typing import Self, TypeAlias
+from typing import Self
 
 import torch
 import torch.nn as nn
@@ -8,55 +10,39 @@ import torchinfo
 from torch import Tensor
 from torch.nn import Module
 
-from ..config.files import Files
-from ..utils.common import load_config, retrieve_config_file
-from . import layers
-
-InputType: TypeAlias = tuple[int, int]
-ShrinkageType: TypeAlias = list[
-    tuple[
-        tuple[int, int, int, int],
-        tuple[int, int],
-    ]
-]
-ResidualsType: TypeAlias = list[
-    tuple[
-        tuple[int, int, int, int, bool],
-        tuple[int, int, int, int, bool],
-        tuple[int],
-        tuple[int, int],
-    ]
-]
-NeckType: TypeAlias = list[tuple[int, int]]
-
-
-@dataclass(frozen=True, kw_only=True)
-class SeResNetArch:
-    """Represents the architecture of the Squeeze and Excitation ResNet model."""
-
-    INPUT_SHAPE: InputType
-    SHRINKAGE: ShrinkageType
-    RESIDUALS: ResidualsType
-    NECK: NeckType
+from ..config import ConfigFile
+from .aliases import InputShape, Neck, Residuals, Shrinkage
+from .layers import LazySEResidualBlock, MaxDepthPool2d
 
 
 @unique
 class ArchType(StrEnum):
     """Available architecture types for the Squeeze and Excitation ResNet model."""
 
-    SeResNet2SR = "SeResNet2SR"
-    SeResNet3SR = "SeResNet3SR"
-    SeResNet4SR = "SeResNet4SR"
+    SEResNet2 = "SEResNet2"
+    SEResNet3 = "SEResNet3"
+    SEResNet4 = "SEResNet4"
 
     @classmethod
-    def types(cls) -> set[str]:
-        return set(key.value for key in cls)
+    def content(cls) -> set[str]:
+        """Returns a set of all available architecture types."""
+        return set(member for member in cls)
 
 
-class SeResNet(nn.Module):
+@dataclass(frozen=True, kw_only=True)
+class SEResNetArch:
+    """Represents the architecture of the Squeeze and Excitation ResNet model."""
+
+    INPUT_SHAPE: InputShape
+    SHRINKAGE: Shrinkage
+    RESIDUALS: Residuals
+    NECK: Neck
+
+
+class SEResNet(nn.Module):
     """Squeeze and Excitation Residual Network for classification tasks."""
 
-    def __init__(self, num_classes: int, arch: SeResNetArch) -> None:
+    def __init__(self, num_classes: int, arch: SEResNetArch) -> None:
         super().__init__()
         self._architecture = arch
 
@@ -79,9 +65,9 @@ class SeResNet(nn.Module):
         for res_params1, res_params2, depth_pool_params, max_pool_params in arch.RESIDUALS:
             residuals.append(
                 nn.Sequential(
-                    layers.LazySeResidualBlock(*res_params1),
-                    layers.LazySeResidualBlock(*res_params2),
-                    layers.MaxDepthPool2d(*depth_pool_params),
+                    LazySEResidualBlock(*res_params1),
+                    LazySEResidualBlock(*res_params2),
+                    MaxDepthPool2d(*depth_pool_params),
                     nn.MaxPool2d(*max_pool_params),
                 )
             )
@@ -98,12 +84,12 @@ class SeResNet(nn.Module):
 
         self.feed_forward = nn.Sequential(shrinkage, residuals, flatten, neck, classifier)
 
-    @property
-    def architecture(self) -> SeResNetArch:
-        return self._architecture
-
     def __call__(self, x: Tensor) -> Tensor:
         return self.feed_forward(x)
+
+    @property
+    def architecture(self) -> SEResNetArch:
+        return self._architecture
 
     def forward(self, x: Tensor) -> Tensor:
         return self.feed_forward(x)
@@ -115,14 +101,14 @@ class SeResNet(nn.Module):
         return self
 
 
-def get_se_resnet_arch(arch_type: ArchType) -> SeResNetArch:
-    architectures = load_config(retrieve_config_file(Files.ARCH))
-    return SeResNetArch(**architectures[arch_type.value])
-
-
-def init_se_resnet(arch_type: str | ArchType, num_classes: int) -> SeResNet:
+def get_se_resnet_arch(arch_type: str | ArchType) -> SEResNetArch:
     arch_type = ArchType(arch_type)
-    model = SeResNet(num_classes, get_se_resnet_arch(arch_type))
+    arch = ConfigFile.ARCH.load().get(arch_type)
+    return SEResNetArch(**arch)
+
+
+def init_se_resnet(arch_type: str | ArchType, num_classes: int) -> SEResNet:
+    model = SEResNet(num_classes, get_se_resnet_arch(arch_type))
     return model.warmup()
 
 

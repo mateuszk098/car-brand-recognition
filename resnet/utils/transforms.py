@@ -8,6 +8,7 @@ STD: tuple[float, float, float] = (0.229, 0.224, 0.225)
 
 
 def train_transform(img_size: tuple[int, int]) -> Compose:
+    """Returns augmentation and normalization transformations for training."""
     return transforms.Compose(
         [
             transforms.ToTensor(),
@@ -22,6 +23,7 @@ def train_transform(img_size: tuple[int, int]) -> Compose:
 
 
 def eval_transform(img_size: tuple[int, int]) -> Compose:
+    """Returns normalization transformations for evaluation."""
     return transforms.Compose(
         [
             transforms.ToTensor(),

@@ -9,13 +9,13 @@ import torch
 from numpy.typing import ArrayLike
 from torch import Tensor
 
-from resnet.network.arch import ArchType, SeResNet, init_se_resnet
+from resnet.network.arch import ArchType, SEResNet, init_se_resnet
 from resnet.utils.transforms import eval_transform
 
 PRETRAINED_URLS: dict[ArchType, str] = {
-    ArchType.SeResNet2SR: "",
-    ArchType.SeResNet3SR: "",
-    ArchType.SeResNet2SR: "",
+    ArchType.SEResNet2: "",
+    ArchType.SEResNet3: "",
+    ArchType.SEResNet3: "",
 }
 
 CLASS_TO_IDX: dict[str, int] = {
@@ -32,12 +32,13 @@ CLASS_TO_IDX: dict[str, int] = {
 
 def model_cache(func):
     wrapper = lru_cache(maxsize=1)(func)
-    wrapper.__signature__ = signature(func)
+    wrapper.__signature__ = signature(func)  # type: ignore
     return wrapper
 
 
 @model_cache
-def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | None = None) -> SeResNet:
+def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | None = None) -> SEResNet:
+    """Loads pre-trained SE-ResNet model."""
     model = init_se_resnet(arch_type, len(CLASS_TO_IDX))
     if weights_file is None:
         weights_file = download_pretrained_weights(arch_type)
@@ -47,6 +48,7 @@ def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | Non
 
 
 def download_pretrained_weights(arch_type: str | ArchType) -> PathLike:
+    """Downloads pre-trained weights for the specified architecture."""
     arch_type = ArchType(arch_type)
     weights_file = Path(f"{arch_type.lower()}-weights").with_suffix(".pt")
     if not weights_file.is_file():
@@ -54,7 +56,7 @@ def download_pretrained_weights(arch_type: str | ArchType) -> PathLike:
     return weights_file
 
 
-def predict(image: ArrayLike, model: SeResNet, topk: int = 5) -> list[dict[str, float]]:
+def predict(image: ArrayLike, model: SEResNet, topk: int = 5) -> list[dict[str, float]]:
     processed_img = preprocess(image, model.architecture.INPUT_SHAPE)
     processed_img = processed_img.unsqueeze(0)
     with torch.inference_mode():

@@ -30,11 +30,13 @@ class VehicleDataLoader(DataLoader):
         self.eval_transform = eval_transform
 
     def train(self) -> None:
+        """Sets train transformation for the dataset."""
         if self.train_transform is None:
             raise ValueError("Train transform is not set.")
         self.dataset.transform = self.train_transform
 
     def eval(self) -> None:
+        """Sets evaluation transformation for the dataset."""
         if self.eval_transform is None:
             raise ValueError("Eval transform is not set.")
         self.dataset.transform = self.eval_transform

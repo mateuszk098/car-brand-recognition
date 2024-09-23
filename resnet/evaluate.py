@@ -1,10 +1,10 @@
 import os
-import time
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Literal
 
 import torch
 import torch.nn as nn
@@ -16,7 +16,7 @@ from torch.nn import Module
 from torchvision.datasets import ImageFolder
 
 from resnet.inference import load_se_resnet
-from resnet.utils.common import init_logger, load_config
+from resnet.utils.common import init_logger, load_yaml
 from resnet.utils.loaders import VehicleDataLoader
 from resnet.utils.transforms import eval_transform
 
@@ -35,7 +35,11 @@ class EvaluationResult:
     ConfusionMatrix: NDArray
 
 
-def evaluate(model: Module, loader: VehicleDataLoader, average: str = "macro") -> EvaluationResult:
+def evaluate(
+    model: Module,
+    loader: VehicleDataLoader,
+    average: Literal["micro", "macro", "weighted", "none"] | None = "macro",
+) -> EvaluationResult:
     model.eval()
     loader.eval()
 
@@ -73,7 +77,7 @@ def evaluate(model: Module, loader: VehicleDataLoader, average: str = "macro") -
 
 def main(*, config_file: str | PathLike) -> None:
     logger.info(f"Loading configuration from {config_file!s}...")
-    config = SimpleNamespace(**load_config(config_file))
+    config = SimpleNamespace(**load_yaml(config_file))
 
     valid_dataset = ImageFolder(config.VALID_DATASET)
 

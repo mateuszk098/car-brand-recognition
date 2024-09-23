@@ -21,7 +21,7 @@ from torchvision.datasets import ImageFolder
 
 from resnet.network.arch import arch_summary, init_se_resnet
 from resnet.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
-from resnet.utils.common import RecordedStats, init_logger, load_config
+from resnet.utils.common import RecordedStats, init_logger, load_yaml
 from resnet.utils.loaders import VehicleDataLoader
 from resnet.utils.trainers import fit
 from resnet.utils.transforms import eval_transform, train_transform
@@ -41,7 +41,7 @@ logger = init_logger(os.getenv("LOGGER"))
 
 def main(*, config_file: str | PathLike) -> None:
     logger.info(f"Loading configuration from {config_file!s}...")
-    config = SimpleNamespace(**load_config(config_file))
+    config = SimpleNamespace(**load_yaml(config_file))
 
     logger.info("Initializing model, datasets and loaders...")
     train_dataset = ImageFolder(config.TRAIN_DATASET)

@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter
 
-from .common import History, RecordedStats
+from .callbacks import History, RecordedStats
 
 plt.style.use("ggplot")
 plt.rcParams.update(
@@ -28,6 +28,7 @@ VAL_COLOR = "#F78A1F"
 
 
 def smooth_curve(x: NDArray, y: NDArray, window: int = 5, order: int = 2) -> tuple[NDArray, NDArray]:
+    """Smooths the curve using Savitzky-Golay filter and interpolates it using cubic spline."""
     if len(y) < window:
         return x, y
     y_filtered = savgol_filter(y, window, order)
@@ -38,8 +39,9 @@ def smooth_curve(x: NDArray, y: NDArray, window: int = 5, order: int = 2) -> tup
 
 
 def save_learning_curves(history: History, path: str | PathLike, window: int = 5, order: int = 2) -> None:
-    if not RecordedStats.values().issubset(history.keys()):
-        raise ValueError(f"Missing required keys in history: {RecordedStats.values()!r}")
+    """Saves the learning curves plot to the given path."""
+    if not RecordedStats.content().issubset(history.keys()):
+        raise ValueError(f"Missing required keys in history: {RecordedStats.content()!r}")
 
     data = pd.DataFrame(history).rename_axis("epoch").reset_index().assign(epoch=lambda x: x.epoch.add(1))
     epoch = data.epoch.to_numpy()

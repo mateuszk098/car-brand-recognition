@@ -1,4 +1,4 @@
-SeResNet2SR:
+SEResNet2:
   INPUT_SHAPE: [224, 224]
   SHRINKAGE: [[[16, 5, 2, 2], [2, 2]]]
   RESIDUALS:
@@ -7,7 +7,8 @@ SeResNet2SR:
       [[64, 5, 2, 8, True], [64, 5, 1, 8, True], [2], [2, 2]],
     ]
   NECK: [[256, 0.5], [128, 0.25]]
-SeResNet3SR:
+
+SEResNet3:
   INPUT_SHAPE: [224, 224]
   SHRINKAGE: [[[32, 5, 2, 2], [2, 2]]]
   RESIDUALS:
@@ -17,7 +18,8 @@ SeResNet3SR:
       [[128, 3, 1, 8, True], [128, 3, 1, 8, True], [4], [2, 2]],
     ]
   NECK: [[512, 0.5], [256, 0.25]]
-SeResNet4SR:
+
+SEResNet4:
   INPUT_SHAPE: [448, 448]
   SHRINKAGE: [[[32, 5, 2, 2], [2, 2]]]
   RESIDUALS:

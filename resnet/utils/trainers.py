@@ -15,8 +15,8 @@ from torch.optim import Optimizer  # type: ignore
 from torch.optim.lr_scheduler import LRScheduler
 from torchmetrics import Metric
 
-from .callbacks import Callbacks
-from .common import RecordedStats, init_logger
+from .callbacks import Callbacks, RecordedStats
+from .common import init_logger
 from .loaders import VehicleDataLoader
 
 assert load_dotenv(find_dotenv()), "The .env file is missing!"

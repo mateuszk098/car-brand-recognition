@@ -1,4 +1,4 @@
-ARCH_TYPE: "SeResNet3SR"
+ARCH_TYPE: "SEResNet3"
 TRAIN_DATASET: "../data/vehicles/train/"
 VALID_DATASET: "../data/vehicles/valid/"
 METRIC_AVERAGE: "macro"
