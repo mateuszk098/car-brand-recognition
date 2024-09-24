@@ -20,13 +20,13 @@ from mlflow.types import Schema, TensorSpec
 from torchvision.datasets import ImageFolder
 
 from resnet.network.arch import arch_summary, init_se_resnet
-from resnet.utils.callbacks import Callbacks, EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
+from resnet.utils.callbacks import EarlyStopping, LearningCurvesCheckpoint, ModelCheckpoint
 from resnet.utils.common import RecordedStats, init_logger, load_yaml
 from resnet.utils.loaders import VehicleDataLoader
 from resnet.utils.trainers import fit
 from resnet.utils.transforms import eval_transform, train_transform
 
-assert load_dotenv(find_dotenv()), "The .env file is missing!"
+load_dotenv(find_dotenv())
 
 torch.backends.cudnn.benchmark = True
 torch.manual_seed(42)
@@ -96,25 +96,25 @@ def main(*, config_file: str | PathLike) -> None:
     )
 
     logger.info("Initializing callbacks...")
-    early_stopping_callback = EarlyStopping(
+    early_stopping = EarlyStopping(
         monitor_value=RecordedStats(config.MONITOR),
         patience=config.PATIENCE,
         min_delta=config.MIN_DELTA,
     )
-    model_checkpoint_callback = ModelCheckpoint(
+    model_checkpoint = ModelCheckpoint(
         model,
         optimizer,
         scheduler,
         checkpoints_freq=config.CHECKPOINTS_FREQ,
         checkpoints_dir=config.CHECKPOINTS_DIR,
     )
-    learning_curves_checkpoint_callback = LearningCurvesCheckpoint(
+    learning_curves = LearningCurvesCheckpoint(
         checkpoints_freq=config.CHECKPOINTS_FREQ,
         checkpoints_dir=config.CHECKPOINTS_DIR,
     )
     if config.RESUME:
-        model_checkpoint_callback.load(map_location=DEVICE)
-        learning_curves_checkpoint_callback.load()
+        model_checkpoint.load(map_location=DEVICE)
+        learning_curves.load()
         logger.info("Resuming training from the latest checkpoint...")
 
     logger.info(f"Start training on {torch.cuda.get_device_name(DEVICE)}...")
@@ -142,11 +142,7 @@ def main(*, config_file: str | PathLike) -> None:
             l1_weight=config.L1_WEIGHT,
             l2_weight=config.L2_WEIGHT,
             epochs=config.EPOCHS,
-            callbacks={
-                Callbacks.EarlyStopping: early_stopping_callback,
-                Callbacks.ModelCheckpoint: model_checkpoint_callback,
-                Callbacks.LearningCurvesCheckpoint: learning_curves_checkpoint_callback,
-            },
+            callbacks=[early_stopping, model_checkpoint, learning_curves],
         )
 
         final_model_id = Path(strftime(f"{config.ARCH_TYPE}_%H_%M_%S_%d_%m_%Y")).with_suffix(".pt")

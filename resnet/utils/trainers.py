@@ -3,7 +3,6 @@
 import os
 import time
 from collections import defaultdict
-from typing import Any, Callable
 
 import mlflow
 import torch
@@ -15,11 +14,11 @@ from torch.optim import Optimizer  # type: ignore
 from torch.optim.lr_scheduler import LRScheduler
 from torchmetrics import Metric
 
-from .callbacks import Callbacks, RecordedStats
+from .callbacks import Callback, EarlyStopping, ModelCheckpoint, RecordedStats
 from .common import init_logger
 from .loaders import VehicleDataLoader
 
-assert load_dotenv(find_dotenv()), "The .env file is missing!"
+load_dotenv(find_dotenv())
 
 logger = init_logger(os.getenv("LOGGER"))
 
@@ -115,24 +114,21 @@ def fit(
     l1_weight: float = 0.0,
     l2_weight: float = 0.0,
     epochs: int = 100,
-    callbacks: dict[Callbacks, Callable[..., Any]] | None = None,
-) -> dict[str, list[float]]:
+    callbacks: list[Callback] | None = None,
+) -> dict[RecordedStats, list[float]]:
 
     start_epoch: int = 1
     history = defaultdict(list)
+    callbacks = callbacks or list()
     log = (
         "Epoch: {:3d} | Train Time: {:3.2f} s | Train Loss: {:6.4f} | "
         "Train Acc: {:6.4f} | Val Loss: {:6.4f} | Val Acc: {:6.4f}"
     )
 
-    callbacks = callbacks if callbacks is not None else dict()
-    checkpoint_callback = callbacks.get(Callbacks.ModelCheckpoint)
-    early_stopping_callback = callbacks.get(Callbacks.EarlyStopping)
-    learning_curves_checkpoint_callback = callbacks.get(Callbacks.LearningCurvesCheckpoint)
-
-    if checkpoint_callback is not None:
-        start_epoch = 1 + checkpoint_callback.latest_epoch
-        history = defaultdict(list, checkpoint_callback.history)
+    for callback in callbacks:
+        if isinstance(callback, ModelCheckpoint):
+            start_epoch = 1 + callback.latest_epoch
+            history = defaultdict(list, callback.history)
 
     for epoch in range(start_epoch, epochs + 1):
         t0 = time.perf_counter()
@@ -155,15 +151,9 @@ def fit(
         info = log.format(epoch, t1 - t0, train_loss, train_acc, valid_loss, valid_acc)
         logger.info(info)
 
-        if checkpoint_callback is not None:
-            checkpoint_callback(history)
-
-        if learning_curves_checkpoint_callback is not None:
-            learning_curves_checkpoint_callback(history)
-
-        if early_stopping_callback is not None:
-            if early_stopping_callback(history):
-                logger.info("Early Stopping...")
+        for callback in callbacks:
+            if callback(history) and isinstance(callback, EarlyStopping):
+                logger.info("Early stopping...")
                 break
 
     return history

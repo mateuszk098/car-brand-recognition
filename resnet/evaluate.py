@@ -20,9 +20,10 @@ from resnet.utils.common import init_logger, load_yaml
 from resnet.utils.loaders import VehicleDataLoader
 from resnet.utils.transforms import eval_transform
 
-assert load_dotenv(find_dotenv()), "The .env file is missing!"
-logger = init_logger(os.getenv("LOGGER"))
+load_dotenv(find_dotenv())
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+logger = init_logger(os.getenv("LOGGER"))
 
 
 @dataclass(frozen=True, kw_only=True)

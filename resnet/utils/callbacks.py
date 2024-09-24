@@ -2,11 +2,10 @@
 
 import os
 from abc import ABCMeta, abstractmethod
-from enum import StrEnum, unique
 from os import PathLike
 from pathlib import Path
 from time import strftime
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Protocol
 
 import torch
 from dotenv import find_dotenv, load_dotenv
@@ -17,60 +16,14 @@ from torch.optim.lr_scheduler import LRScheduler
 from .common import History, RecordedStats, init_logger, remove_file
 from .visualize import save_learning_curves
 
-assert load_dotenv(find_dotenv()), "The .env file is missing!"
-logger = init_logger(os.getenv("LOGGER"))
-
+load_dotenv(find_dotenv())
 torch.serialization.add_safe_globals([RecordedStats])
 
-
-@unique
-class Callbacks(StrEnum):
-    """Available callbacks for the training loop."""
-
-    EarlyStopping = "EarlyStopping"
-    ModelCheckpoint = "ModelCheckpoint"
-    LearningCurvesCheckpoint = "LearningCurvesCheckpoint"
-
-    @classmethod
-    def content(cls) -> set[str]:
-        return set(member for member in cls)
+logger = init_logger(os.getenv("LOGGER"))
 
 
-class EarlyStopping:
-    """Early stopping callback with the given monitoring value."""
-
-    def __init__(
-        self,
-        monitor_value: str | RecordedStats = RecordedStats.VAL_LOSS,
-        patience: int = 10,
-        min_delta: float = 0.0,
-    ) -> None:
-        self.monitor_value = RecordedStats(monitor_value)
-        self.patience = int(patience)
-        self.min_delta = float(min_delta)
-        self.counter = 0
-        self.min_value = float("inf")
-
-    def __call__(self, history: History) -> bool:
-        return self.should_stop(history)
-
-    def should_stop(self, history: History) -> bool:
-        """Returns True if there is no significant improvement (`min_delta`)
-        in the monitored value by the last `patience` epochs. Otherwise, returns False."""
-
-        current_values = history[self.monitor_value]
-        current_value = 0.0 if not current_values else current_values[-1]
-
-        if current_value < self.min_value - self.min_delta:
-            self.min_value = current_value
-            self.counter = 0
-            return False
-
-        self.counter += 1
-        if self.counter == self.patience:
-            return True
-
-        return False
+class Callback(Protocol):
+    def __call__(self, history: History) -> Any: ...
 
 
 class Checkpoint(metaclass=ABCMeta):
@@ -85,11 +38,11 @@ class Checkpoint(metaclass=ABCMeta):
         self.latest_file: PathLike | None = None
         self.run_dir: PathLike | None = None
 
-    def __call__(self, *args: Any, **kwargs: Any) -> None:
-        self.save(*args, **kwargs)
+    def __call__(self, history: History) -> None:
+        self.save(history)
 
     @abstractmethod
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(self, history: History) -> None:
         raise NotImplementedError
 
     def load(self) -> PathLike:
@@ -212,6 +165,43 @@ class LearningCurvesCheckpoint(Checkpoint):
         """Infer the latest run directory and file."""
         self.run_dir = super().load()
         self.latest_file = infer_latest_file(self.run_dir, self.checkpoints_ext)
+
+
+class EarlyStopping:
+    """Early stopping callback with the given monitoring value."""
+
+    def __init__(
+        self,
+        monitor_value: str | RecordedStats = RecordedStats.VAL_LOSS,
+        patience: int = 10,
+        min_delta: float = 0.0,
+    ) -> None:
+        self.monitor_value = RecordedStats(monitor_value)
+        self.patience = int(patience)
+        self.min_delta = float(min_delta)
+        self.counter = 0
+        self.min_value = float("inf")
+
+    def __call__(self, history: History) -> bool:
+        return self.should_stop(history)
+
+    def should_stop(self, history: History) -> bool:
+        """Returns True if there is no significant improvement (`min_delta`)
+        in the monitored value by the last `patience` epochs. Otherwise, returns False."""
+
+        current_values = history[self.monitor_value]
+        current_value = 0.0 if not current_values else current_values[-1]
+
+        if current_value < self.min_value - self.min_delta:
+            self.min_value = current_value
+            self.counter = 0
+            return False
+
+        self.counter += 1
+        if self.counter == self.patience:
+            return True
+
+        return False
 
 
 def infer_latest_dir(directory) -> PathLike | None:
