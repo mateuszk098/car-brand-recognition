@@ -1,3 +1,3 @@
-# Vehicle Recognition
+# Car Brand Recognition
 
-Full stack application for vehicle recognition.
+Full stack application for car brand recognition.

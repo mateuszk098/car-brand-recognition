@@ -6,6 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Literal
 
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 import torchmetrics.classification as metrics
@@ -40,6 +42,7 @@ def evaluate(
     model: Module,
     loader: VehicleDataLoader,
     average: Literal["micro", "macro", "weighted", "none"] | None = "macro",
+    normalize: Literal["none", "true", "pred", "all"] | None = None,
 ) -> EvaluationResult:
     model.eval()
     loader.eval()
@@ -52,7 +55,7 @@ def evaluate(
     precision = metrics.MulticlassPrecision(average=average, num_classes=num_classes).to(DEVICE)
     recall = metrics.MulticlassRecall(average=average, num_classes=num_classes).to(DEVICE)
     f1_score = metrics.MulticlassF1Score(average=average, num_classes=num_classes).to(DEVICE)
-    confusion_matrix = metrics.MulticlassConfusionMatrix(num_classes=num_classes).to(DEVICE)
+    confusion_matrix = metrics.MulticlassConfusionMatrix(num_classes=num_classes, normalize=normalize).to(DEVICE)
 
     with torch.inference_mode():
         for x, y in loader:
@@ -66,13 +69,21 @@ def evaluate(
             f1_score.update(y_proba, y)
             confusion_matrix.update(y_proba, y)
 
+    plt.figure(figsize=(16, 16), dpi=300, tight_layout=True)
+    confusion_matrix.plot(ax=plt.gca(), cmap="bone_r", labels=loader.dataset.classes)  # type: ignore
+    for text in plt.gca().texts:
+        text.set_fontsize(10)
+    plt.gca().set_xlabel("Predicted")
+    plt.gca().set_ylabel("Ground Truth")
+    plt.savefig("confusion_matrix.png")
+
     return EvaluationResult(
         Loss=model_loss.item() / len(loader),
         Accuracy=accuracy.compute().item(),
         Precision=precision.compute().item(),
         Recall=recall.compute().item(),
         F1Score=f1_score.compute().item(),
-        ConfusionMatrix=confusion_matrix.compute().cpu().numpy().astype(int),
+        ConfusionMatrix=confusion_matrix.compute().cpu().numpy().round(2),
     )
 
 
@@ -92,13 +103,13 @@ def main(*, config_file: str | PathLike) -> None:
         shuffle=False,
     )
 
-    res = evaluate(model, valid_loader, config.METRIC_AVERAGE)
+    res = evaluate(model, valid_loader, config.METRIC_AVERAGE, config.CONFUSION_MATRIX_NORMALIZE)
 
-    cm = "\n".join(str(row) for row in res.ConfusionMatrix.tolist())
     log = "Accuracy: {:4.2%} | Precision: {:4.2%} | " "Recall: {:4.2%} | F1 Score: {:4.2%} | Loss {:6.4f}"
+    np.set_printoptions(precision=2, linewidth=140, floatmode="fixed")
 
     logger.info(log.format(res.Accuracy, res.Precision, res.Recall, res.F1Score, res.Loss))
-    logger.info(f"Confusion Matrix:\n{cm}")
+    logger.info(f"Confusion Matrix:\n{res.ConfusionMatrix}")
 
 
 if __name__ == "__main__":

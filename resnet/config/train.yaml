@@ -1,7 +1,7 @@
 ARCH_TYPE: "SEResNet3"
-TRAIN_DATASET: "../datasets/vehicles/train/"
-VALID_DATASET: "../datasets/vehicles/valid/"
-METRIC_AVERAGE: "macro"
+TRAIN_DATASET: "../datasets/cars/train/"
+VALID_DATASET: "../datasets/cars/valid/"
+METRIC_AVERAGE: "weighted"
 BATCH_SIZE: 128
 EPOCHS: 100
 MONITOR: "val_loss"

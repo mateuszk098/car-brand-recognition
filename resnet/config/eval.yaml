@@ -1,5 +1,6 @@
 ARCH_TYPE: "SEResNet3"
-WEIGHTS_FILE: "SEResNet3_20_06_43_23_09_2024.pt"
-VALID_DATASET: "../datasets/vehicles/valid/"
-METRIC_AVERAGE: "macro"
+WEIGHTS_FILE: "../notes/weights.pt"
+VALID_DATASET: "../datasets/cars/valid/"
+METRIC_AVERAGE: "weighted"
+CONFUSION_MATRIX_NORMALIZE: "true"
 BATCH_SIZE: 128
