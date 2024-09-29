@@ -17,6 +17,8 @@ def train_transform(img_size: tuple[int, int]) -> Compose:
             transforms.RandomRotation(degrees=15),
             transforms.ColorJitter(contrast=0.2, saturation=0.2, brightness=0.2),
             transforms.RandomGrayscale(p=0.2),
+            transforms.RandomPerspective(distortion_scale=0.2, p=0.2),
+            transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 1.0)),
             transforms.Normalize(mean=MEAN, std=STD),
         ]
     )

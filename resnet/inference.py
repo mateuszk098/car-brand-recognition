@@ -41,8 +41,8 @@ CLASS_TO_IDX: dict[str, int] = {
     "Mercedes": 19,
     "Mitsubishi Lancer": 20,
     "Porsche": 21,
-    "Rolls Royce": 22,
-    "Tesla": 23,
+    "Renault": 22,
+    "Rolls Royce": 23,
     "Toyota": 24,
 }
 

@@ -154,6 +154,6 @@ def fit(
         for callback in callbacks:
             if callback(history) and isinstance(callback, EarlyStopping):
                 logger.info("Early stopping...")
-                break
+                return history
 
     return history
