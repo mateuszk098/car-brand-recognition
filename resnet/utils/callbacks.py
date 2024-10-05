@@ -19,7 +19,7 @@ from .visualize import save_learning_curves
 load_dotenv(find_dotenv())
 torch.serialization.add_safe_globals([RecordedStats])
 
-logger = init_logger(os.getenv("LOGGER"))
+logger = init_logger("INFO" if os.getenv("MODE") == "PROD" else "DEBUG")
 
 
 class Callback(Protocol):

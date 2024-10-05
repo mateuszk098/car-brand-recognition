@@ -26,17 +26,22 @@ from resnet.utils.loaders import VehicleDataLoader
 from resnet.utils.trainers import fit
 from resnet.utils.transforms import eval_transform, train_transform
 
+if not torch.cuda.is_available():
+    raise RuntimeError("CUDA is not available, aborting...")
+
 load_dotenv(find_dotenv())
 
+logger = init_logger("INFO" if os.getenv("MODE") == "PROD" else "DEBUG")
+
+SEED = 42
+DEVICE = torch.device("cuda")
+
 torch.backends.cudnn.benchmark = True
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
 
 mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
 mlflow.set_experiment("network-training")
-
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-logger = init_logger(os.getenv("LOGGER"))
 
 
 def main(*, config_file: str | PathLike) -> None:
