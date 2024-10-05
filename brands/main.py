@@ -3,7 +3,7 @@ import os
 import uvicorn
 from fastapi import FastAPI
 
-from recon.web.user import router as user_router
+from brands.web.user import router as user_router
 
 PORT = int(os.getenv("FASTAPI_PORT", 8000))
 HOST = os.getenv("FASTAPI_HOST", "localhost")

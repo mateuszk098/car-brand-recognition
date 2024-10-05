@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from ..models.user import User
-from ..services import user as service
+from brands.schemas.user import User
+from brands.services import user as service
 
 router = APIRouter(prefix="/user", tags=["User"])
 

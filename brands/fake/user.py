@@ -1,4 +1,4 @@
-from ..models.user import User
+from ..schemas.user import User
 
 _users: list[User] = [
     User(username="JohnDoe", email="johndoe@gmail.com"),

@@ -1,5 +1,5 @@
 from ..data import user as data
-from ..models.user import User
+from ..schemas.user import User
 
 
 def get_one_user(username: str) -> User | None:

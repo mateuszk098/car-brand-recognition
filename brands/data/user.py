@@ -1,5 +1,5 @@
 from ..fake import user as fake
-from ..models.user import User
+from ..schemas.user import User
 
 
 def get_all_users() -> list[User]:
