@@ -13,7 +13,12 @@ ACCESS_TOKEN_EXPIRES_HOURS = 1
 router = APIRouter(prefix="/user", tags=["User"])
 
 
-@router.post("/token", status_code=status.HTTP_202_ACCEPTED, include_in_schema=False)
+@router.post(
+    "/token",
+    response_model=Token,
+    status_code=status.HTTP_202_ACCEPTED,
+    include_in_schema=False,
+)
 async def create_access_token(form_data: LoginDep, db: DBDep) -> Token:
     try:
         user = service.authenticate_user(form_data.username, form_data.password, db)
@@ -27,7 +32,12 @@ async def create_access_token(form_data: LoginDep, db: DBDep) -> Token:
         return Token(access_token=access_token, token_type="bearer")
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserSchema)
+@router.post(
+    "/register",
+    response_model=UserSchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register New User",
+)
 async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema:
     try:
         return service.create_user(user, db)
@@ -36,32 +46,37 @@ async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema
 
 
 @router.get(
-    "/me",
-    status_code=status.HTTP_200_OK,
+    "/info",
     response_model=UserSchema,
-    summary="Get the current user.",
+    status_code=status.HTTP_200_OK,
+    summary="Get User Information",
 )
-async def get_me(user: UserDep) -> UserSchema:
+async def get_info_about_me(user: UserDep) -> UserSchema:
     return user
 
 
 @router.post(
-    "/predict",
-    status_code=status.HTTP_201_CREATED,
+    "/tasks/predict",
     response_model=TaskSchema,
-    summary="Predict a car brand.",
+    status_code=status.HTTP_201_CREATED,
+    summary="Predict Car Brand",
 )
-async def predict(
+async def predict_car_brand(
     image: UploadFile,
     db: DBDep,
     user: UserDep,
     model: ModelDep,
-    topk: int = Query(gt=0),
+    topk: int = Query(default=5, gt=0, description="Number of top brands from prediction."),
 ) -> TaskSchema:
     task = await service.create_task(image, user.id, db, model, topk)
     return task
 
 
-@router.get("/tasks/", status_code=status.HTTP_200_OK, response_model=list[TaskSchema])
-async def get_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
+@router.get(
+    "/tasks/",
+    response_model=list[TaskSchema],
+    status_code=status.HTTP_200_OK,
+    summary="Get All User Tasks",
+)
+async def get_my_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
     return service.get_user_tasks(user.id, db)

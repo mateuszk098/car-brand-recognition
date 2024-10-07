@@ -1,5 +1,8 @@
-from sqlalchemy import ForeignKey, Integer, LargeBinary, String
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.sql import func
 
 
 class Base(DeclarativeBase):
@@ -11,6 +14,7 @@ class User(Base):
 
     __tablename__ = "users"
 
+    time_created: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String, unique=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True)
@@ -25,6 +29,7 @@ class Task(Base):
 
     __tablename__ = "tasks"
 
+    time_created: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(String)

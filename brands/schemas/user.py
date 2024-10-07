@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import StrEnum, auto
 
 from pydantic import BaseModel, EmailStr, Field, SecretStr
@@ -41,6 +42,7 @@ class UserCreate(UserBase):
 class UserSchema(UserBase):
     """Represents user schema in database."""
 
+    time_created: datetime
     id: int
     hashed_password: bytes
 
@@ -48,6 +50,7 @@ class UserSchema(UserBase):
         from_attributes = True
         json_schema_extra = {
             "example": {
+                "time_created": "2021-01-01T00:00:00",
                 "id": 1,
                 "username": "john_doe",
                 "email": "johndoe@gmail.com",
@@ -62,6 +65,7 @@ class UserSchema(UserBase):
 class TaskSchema(BaseModel):
     """Represents prediction from deep learning model."""
 
+    time_created: datetime
     id: int
     user_id: int
     name: str
@@ -73,6 +77,7 @@ class TaskSchema(BaseModel):
         from_attributes = True
         json_schema_extra = {
             "example": {
+                "time_created": "2021-01-01T00:00:00",
                 "id": 1,
                 "user_id": 1,
                 "name": "image.jpg",
