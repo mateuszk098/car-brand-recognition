@@ -14,8 +14,8 @@ from resnet.utils.transforms import eval_transform
 
 PRETRAINED_URLS: dict[ArchType, str] = {
     ArchType.SEResNet2: "",
-    ArchType.SEResNet3: "",
-    ArchType.SEResNet3: "",
+    ArchType.SEResNet3: "https://drive.google.com/uc?export=download&id=1FdyHb7qY7noFjbMNZUB21baABsk3_mL3",
+    ArchType.SEResNet4: "",
 }
 
 CLASS_TO_IDX: dict[str, int] = {

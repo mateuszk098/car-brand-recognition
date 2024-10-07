@@ -1,5 +1,5 @@
 ARCH_TYPE: "SEResNet3"
-WEIGHTS_FILE: "../notes/weights.pt"
+WEIGHTS_FILE: "./checkpoints/run_14_04_37_05_10_2024/SEResNet3_18_39_37_05_10_2024.pt"
 VALID_DATASET: "../datasets/cars/valid/"
 METRIC_AVERAGE: "weighted"
 CONFUSION_MATRIX_NORMALIZE: "true"
