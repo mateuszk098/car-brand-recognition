@@ -73,7 +73,7 @@ def download_pretrained_weights(arch_type: str | ArchType) -> PathLike:
     return weights_file
 
 
-def predict(image: ArrayLike, model: SEResNet, topk: int = 5) -> list[dict[str, float]]:
+def predict(image: ArrayLike, model: SEResNet, topk: int = 5) -> list[tuple[str, float]]:
     processed_img = preprocess(image, model.architecture.INPUT_SHAPE)
     processed_img = processed_img.unsqueeze(0)
     with torch.inference_mode():
@@ -87,7 +87,10 @@ def preprocess(image: ArrayLike, output_shape: tuple[int, int]) -> Tensor:
     return transform(img)  # type: ignore
 
 
-def postprocess(logits: Tensor, topk: int = 5) -> list[dict[str, float]]:
+def postprocess(logits: Tensor, topk: int = 5) -> list[tuple[str, float]]:
+    if topk < 1:
+        raise ValueError("Topk must be greater than 0.")
+
     n_classes = len(CLASS_TO_IDX)
     topk = n_classes if topk > n_classes else topk
 
@@ -95,11 +98,11 @@ def postprocess(logits: Tensor, topk: int = 5) -> list[dict[str, float]]:
     top_ids = torch.topk(probs, topk).indices.numpy()
     idx_to_class = {v: k for k, v in CLASS_TO_IDX.items()}
 
-    classes_with_probs: list[dict[str, float]] = list()
+    classes_with_probs: list[tuple[str, float]] = list()
     for sample_probs, sample_top_ids in zip(probs, top_ids):
         for idx in sample_top_ids:
             cls = idx_to_class[idx]
             conf = f"{sample_probs[idx].item():.3f}"
-            classes_with_probs.append({cls: float(conf)})
+            classes_with_probs.append((cls, float(conf)))
 
     return classes_with_probs

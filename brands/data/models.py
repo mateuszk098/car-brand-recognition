@@ -1,5 +1,5 @@
-from sqlalchemy import Float, ForeignKey, Integer, LargeBinary, String
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey, Integer, LargeBinary, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -7,6 +7,8 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
+    """Database model of a user."""
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -19,9 +21,13 @@ class User(Base):
 
 
 class Task(Base):
+    """Database model of a deep learning model's prediction."""
+
     __tablename__ = "tasks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
-    prediction: Mapped[str] = mapped_column(String)
-    probability: Mapped[float] = mapped_column(Float)
+    name: Mapped[str] = mapped_column(String)
+    content: Mapped[str] = mapped_column(String)
+    brands: Mapped[str] = mapped_column(String)
+    probs: Mapped[str] = mapped_column(String)

@@ -1,49 +1,29 @@
-from pydantic import BaseModel
+from enum import StrEnum, auto
+
+from pydantic import BaseModel, EmailStr, Field, SecretStr
 
 
-class TaskBase(BaseModel):
-    prediction: str
-    probability: float
+class Role(StrEnum):
+    """Possible user roles."""
 
-
-class TaskCreate(TaskBase):
-    pass
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "prediction": "Audi",
-                "probability": 0.99,
-            }
-        }
-
-
-class TaskSchema(TaskBase):
-    id: int
-    user_id: int
-
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "user_id": 1,
-                "prediction": "Audi",
-                "probability": 0.99,
-            }
-        }
+    user = auto()
+    admin = auto()
 
 
 class UserBase(BaseModel):
-    username: str
-    email: str
-    first_name: str
-    last_name: str
-    role: str
+    """Represents base user schema."""
+
+    username: str = Field(min_length=4, max_length=32, description="Unique username.", examples=["john_doe"])
+    email: EmailStr = Field(description="Email address.", examples=["johndoe@gmail.com"])
+    first_name: str = Field(min_length=2, max_length=32, description="First name.", examples=["John"])
+    last_name: str = Field(min_length=2, max_length=64, description="Last name.", examples=["Doe"])
+    role: Role = Field(description="User role.")
 
 
 class UserCreate(UserBase):
-    password: str
+    """Represents user creation schema."""
+
+    password: SecretStr = Field(min_length=8, max_length=64, description="User password.", examples=["secret123"])
 
     class Config:
         json_schema_extra = {
@@ -53,12 +33,14 @@ class UserCreate(UserBase):
                 "first_name": "John",
                 "last_name": "Doe",
                 "role": "user",
-                "password": "secret",
+                "password": "secret123",
             }
         }
 
 
 class UserSchema(UserBase):
+    """Represents user schema in database."""
+
     id: int
     hashed_password: bytes
 
@@ -77,8 +59,32 @@ class UserSchema(UserBase):
         }
 
 
+class TaskSchema(BaseModel):
+    """Represents prediction from deep learning model."""
+
+    id: int
+    user_id: int
+    name: str
+    content: str
+    brands: str
+    probs: str
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "user_id": 1,
+                "name": "image.jpg",
+                "content": "image/jpeg",
+                "brands": "'Audi', 'BMW', 'Ford'",
+                "probs": "0.8, 0.1, 0.05",
+            }
+        }
+
+
 class Token(BaseModel):
-    """Access token schema."""
+    """Represents access token schema."""
 
     access_token: str
     token_type: str

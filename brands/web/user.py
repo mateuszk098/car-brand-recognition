@@ -1,10 +1,10 @@
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Form, HTTPException, Query, UploadFile, status
 
 from ..errors.user import IncorrectPasswordError, MissingUserError, UserAlreadyExistsError
-from ..schemas.user import TaskCreate, TaskSchema, Token, UserCreate, UserSchema
+from ..schemas.user import TaskSchema, Token, UserCreate, UserSchema
 from ..services import user as service
 from .dependencies import DBDep, LoginDep, ModelDep, UserDep
 
@@ -39,18 +39,29 @@ async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema
     "/me",
     status_code=status.HTTP_200_OK,
     response_model=UserSchema,
-    summary="Get the current user",
+    summary="Get the current user.",
 )
 async def get_me(user: UserDep) -> UserSchema:
     return user
 
 
-@router.post("/predict", status_code=status.HTTP_201_CREATED, response_model=TaskSchema)
-async def predict(ufile: UploadFile, db: DBDep, user: UserDep, model: ModelDep) -> TaskSchema:
-    task = await service.create_task(ufile, user.id, db, model)
+@router.post(
+    "/predict",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TaskSchema,
+    summary="Predict a car brand.",
+)
+async def predict(
+    image: UploadFile,
+    db: DBDep,
+    user: UserDep,
+    model: ModelDep,
+    topk: int = Query(gt=0),
+) -> TaskSchema:
+    task = await service.create_task(image, user.id, db, model, topk)
     return task
 
 
 @router.get("/tasks/", status_code=status.HTTP_200_OK, response_model=list[TaskSchema])
 async def get_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
-    return service.get_tasks(user.id, db)
+    return service.get_user_tasks(user.id, db)
