@@ -1,10 +1,13 @@
+import bcrypt
 import cv2 as cv
 import numpy as np
+from fastapi.security import OAuth2PasswordBearer
 from numpy.typing import NDArray
 
+from app.errors import ImageDecodingError
 from resnet import ArchType, SEResNet, load_se_resnet, predict
 
-from ..errors.classifier import ImageDecodingError
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/user/token")
 
 
 async def load_model() -> SEResNet:
@@ -24,3 +27,13 @@ def decode_image(content: bytes) -> NDArray:
     if image is None:
         raise ImageDecodingError()
     return image
+
+
+def encode_password(password: str) -> bytes:
+    """Encode a plain text password into a hashed password."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+
+
+def verify_password(plain: str, hashed: bytes) -> bool:
+    """Verify a plain text password against a hashed password."""
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed)

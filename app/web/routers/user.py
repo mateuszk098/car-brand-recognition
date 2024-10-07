@@ -3,10 +3,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Form, HTTPException, Query, UploadFile, status
 
-from ..errors.user import IncorrectPasswordError, MissingUserError, UserAlreadyExistsError
-from ..schemas.user import TaskSchema, Token, UserCreate, UserSchema
-from ..services import user as service
-from .dependencies import DBDep, LoginDep, ModelDep, UserDep
+from app.errors import InvalidPasswordError, UserAlreadyExistsError, UserNotFoundError
+from app.schema.user import TaskSchema, Token, UserCreate, UserSchema
+from app.service import auth
+from app.service import user as service
+
+from ..dependencies import DBDep, LoginDep, ModelDep, UserDep
 
 ACCESS_TOKEN_EXPIRES_HOURS = 1
 
@@ -21,14 +23,14 @@ router = APIRouter(prefix="/user", tags=["User"])
 )
 async def create_access_token(form_data: LoginDep, db: DBDep) -> Token:
     try:
-        user = service.authenticate_user(form_data.username, form_data.password, db)
-    except MissingUserError as e:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"User {e} not found")
-    except IncorrectPasswordError:
+        user = auth.authenticate_user(form_data.username, form_data.password, db)
+    except UserNotFoundError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=e.detail)
+    except InvalidPasswordError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
     else:
         expires = timedelta(hours=ACCESS_TOKEN_EXPIRES_HOURS)
-        access_token = service.create_access_token(user.username, expires)
+        access_token = auth.create_access_token(user.username, expires)
         return Token(access_token=access_token, token_type="bearer")
 
 
@@ -42,7 +44,7 @@ async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema
     try:
         return service.create_user(user, db)
     except UserAlreadyExistsError as e:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"User {e} already exists")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
 
 
 @router.get(
@@ -68,7 +70,7 @@ async def predict_car_brand(
     model: ModelDep,
     topk: int = Query(default=5, gt=0, description="Number of top brands from prediction."),
 ) -> TaskSchema:
-    task = await service.create_task(image, user.id, db, model, topk)
+    task = await service.create_task(image, topk, user.id, model, db)
     return task
 
 
@@ -79,4 +81,4 @@ async def predict_car_brand(
     summary="Get All User Tasks",
 )
 async def get_my_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
-    return service.get_user_tasks(user.id, db)
+    return service.get_tasks_for_user(user.id, db)

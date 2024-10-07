@@ -64,13 +64,20 @@ def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | Non
     return model.eval()
 
 
-def download_pretrained_weights(arch_type: str | ArchType) -> PathLike:
+def download_pretrained_weights(arch_type: str | ArchType, directory: str | Path = "./checkpoints") -> PathLike:
     """Downloads pre-trained weights for the specified architecture."""
     arch_type = ArchType(arch_type)
-    weights_file = Path(f"{arch_type.lower()}-weights").with_suffix(".pt")
+    weights_file = create_dest_path(arch_type, directory)
     if not weights_file.is_file():
         gdown.download(PRETRAINED_URLS[arch_type], str(weights_file), quiet=False)
     return weights_file
+
+
+def create_dest_path(arch_type: str | ArchType, directory: str | Path) -> Path:
+    directory = Path(directory)
+    directory.mkdir(exist_ok=True)
+    weights_file = Path(f"{arch_type.lower()}-weights").with_suffix(".pt")
+    return directory.joinpath(weights_file)
 
 
 def predict(image: ArrayLike, model: SEResNet, topk: int = 5) -> list[tuple[str, float]]:
