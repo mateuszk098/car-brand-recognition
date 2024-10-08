@@ -37,6 +37,13 @@ class UserRepository:
         db.refresh(user)
         return user
 
+    @staticmethod
+    def delete_user(user: User, db: Session) -> None:
+        """Delete a user from database."""
+        db.delete(user)
+        db.commit()
+        return
+
 
 class TaskRepository:
     """Repository for handling CRUD operations for user's tasks."""

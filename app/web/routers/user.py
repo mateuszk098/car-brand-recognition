@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Form, HTTPException, Query, UploadFile, status
 
-from app.errors import InvalidPasswordError, UserAlreadyExistsError, UserNotFoundError
+from app.errors import InvalidPasswordError, PasswordMismatchError, UserAlreadyExistsError, UserNotFoundError
 from app.schema.user import TaskSchema, Token, UserCreate, UserSchema
 from app.service import auth
 from app.service import user as service
@@ -26,8 +26,8 @@ async def create_access_token(form_data: LoginDep, db: DBDep) -> Token:
         user = auth.authenticate_user(form_data.username, form_data.password, db)
     except UserNotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=e.detail)
-    except InvalidPasswordError:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+    except InvalidPasswordError as e:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=e.detail)
     else:
         expires = timedelta(hours=ACCESS_TOKEN_EXPIRES_HOURS)
         access_token = auth.create_access_token(user.username, expires)
@@ -45,6 +45,8 @@ async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema
         return service.create_user(user, db)
     except UserAlreadyExistsError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
+    except PasswordMismatchError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
 
 
 @router.get(
@@ -53,7 +55,7 @@ async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema
     status_code=status.HTTP_200_OK,
     summary="Get User Information",
 )
-async def get_info_about_me(user: UserDep) -> UserSchema:
+async def get_current_user_info(user: UserDep) -> UserSchema:
     return user
 
 
@@ -63,7 +65,7 @@ async def get_info_about_me(user: UserDep) -> UserSchema:
     status_code=status.HTTP_201_CREATED,
     summary="Predict Car Brand",
 )
-async def predict_car_brand(
+async def create_task(
     image: UploadFile,
     db: DBDep,
     user: UserDep,
@@ -80,5 +82,5 @@ async def predict_car_brand(
     status_code=status.HTTP_200_OK,
     summary="Get All User Tasks",
 )
-async def get_my_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
+async def get_user_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
     return service.get_tasks_for_user(user.id, db)

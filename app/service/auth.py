@@ -40,11 +40,11 @@ def extract_username_from_token(token: str) -> str:
     try:
         payload = jwt.decode(token, SECRET_KEY, [ALGORITHM])
     except PyJWTError:
-        raise InvalidCredentialsError
+        raise InvalidCredentialsError()
     else:
         username: str = payload.get("sub")
         if username is None:
-            raise InvalidCredentialsError
+            raise InvalidCredentialsError()
         return username
 
 

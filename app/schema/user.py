@@ -11,20 +11,41 @@ class Role(StrEnum):
     admin = auto()
 
 
+class Password(BaseModel):
+    password: SecretStr = Field(min_length=8, max_length=64, description="Password")
+    confirm_password: SecretStr = Field(min_length=8, max_length=64, description="Confirm Password")
+
+
 class UserBase(BaseModel):
     """Represents base user schema."""
 
-    username: str = Field(min_length=4, max_length=32, description="Unique username.", examples=["john_doe"])
-    email: EmailStr = Field(description="Email address.", examples=["johndoe@gmail.com"])
-    first_name: str = Field(min_length=2, max_length=32, description="First name.", examples=["John"])
-    last_name: str = Field(min_length=2, max_length=64, description="Last name.", examples=["Doe"])
-    role: Role = Field(description="User role.")
+    username: str = Field(
+        min_length=4,
+        max_length=32,
+        description="Username",
+        examples=["john_doe"],
+    )
+    email: EmailStr = Field(
+        description="Email Address.",
+        examples=["johndoe@gmail.com"],
+    )
+    first_name: str = Field(
+        min_length=2,
+        max_length=32,
+        description="First Name",
+        examples=["John"],
+    )
+    last_name: str = Field(
+        min_length=2,
+        max_length=64,
+        description="Last Name",
+        examples=["Doe"],
+    )
+    role: Role = Field(description="User Role")
 
 
-class UserCreate(UserBase):
+class UserCreate(UserBase, Password):
     """Represents user creation schema."""
-
-    password: SecretStr = Field(min_length=8, max_length=64, description="User password.", examples=["secret123"])
 
     class Config:
         json_schema_extra = {
@@ -35,6 +56,7 @@ class UserCreate(UserBase):
                 "last_name": "Doe",
                 "role": "user",
                 "password": "secret123",
+                "confirm_password": "secret123",
             }
         }
 

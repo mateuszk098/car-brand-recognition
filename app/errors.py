@@ -29,14 +29,14 @@ class UserNotFoundError(AppError):
     """Raised when a user is not found in database."""
 
     def __init__(self, username: str) -> None:
-        super().__init__(f"{username} not found.")
+        super().__init__(f"User {username} not found.")
 
 
 class UserAlreadyExistsError(AppError):
     """Raised when a user already exists in database."""
 
     def __init__(self, username: str) -> None:
-        super().__init__(f"{username} already exists.")
+        super().__init__(f"User {username} already exists.")
 
 
 class InvalidPasswordError(AppError):
@@ -44,6 +44,13 @@ class InvalidPasswordError(AppError):
 
     def __init__(self) -> None:
         super().__init__("Invalid password.")
+
+
+class PasswordMismatchError(AppError):
+    """Raised when a user enters mismatched passwords."""
+
+    def __init__(self) -> None:
+        super().__init__("Passwords do not match.")
 
 
 class InvalidCredentialsError(AppError):
@@ -81,12 +88,5 @@ class ForbiddenHTTPError(HTTPError):
     def __init__(self) -> None:
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to perform this action.",
+            detail="You are not allowed to perform this action.",
         )
-
-
-class ImageDecodingHTTPError(HTTPError):
-    """HTTPException raised when an image cannot be decoded."""
-
-    def __init__(self) -> None:
-        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot decode image.")
