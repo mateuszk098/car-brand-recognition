@@ -1,13 +1,24 @@
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 import bcrypt
 import cv2 as cv
 import numpy as np
+from fastapi import FastAPI
 from fastapi.security import OAuth2PasswordBearer
 from numpy.typing import NDArray
 
 from app.errors import ImageDecodingError
-from resnet import ArchType, SEResNet, load_se_resnet, predict
+from resnet import ArchType, SEResNet, download_pretrained_weights, load_se_resnet, predict
 
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/user/token")
+
+
+@asynccontextmanager
+async def download_model_on_startup(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Download pre-trained weights for SE-ResNet model."""
+    download_pretrained_weights(ArchType.SEResNet3)
+    yield
 
 
 async def load_model() -> SEResNet:

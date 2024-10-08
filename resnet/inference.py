@@ -55,7 +55,7 @@ def model_cache(func):
 
 @model_cache
 def load_se_resnet(arch_type: str | ArchType, weights_file: str | PathLike | None = None) -> SEResNet:
-    """Loads pre-trained SE-ResNet model."""
+    """Loads pre-trained SE-ResNet model and stores it in cache."""
     model = init_se_resnet(arch_type, len(CLASS_TO_IDX))
     if weights_file is None:
         weights_file = download_pretrained_weights(arch_type)
