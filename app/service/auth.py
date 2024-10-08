@@ -7,9 +7,8 @@ from fastapi import Depends
 from jwt.exceptions import PyJWTError
 from sqlalchemy.orm import Session
 
-from app.errors import InvalidCredentialsError, InvalidPasswordError
-
 from ..data import get_db
+from ..errors import InvalidCredentialsError, InvalidPasswordError
 from ..schema.user import UserSchema
 from .user import get_user_by_username
 from .utils import oauth2_bearer, verify_password

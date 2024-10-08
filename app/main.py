@@ -3,8 +3,7 @@ import os
 import uvicorn
 from fastapi import FastAPI
 
-from app.data import init_db
-from app.service.utils import download_model_on_startup
+from app.service.utils import on_startup
 from app.web.routers.admin import router as admin_router
 from app.web.routers.user import router as user_router
 
@@ -20,18 +19,19 @@ app = FastAPI(
     title="Car Brand Recognition",
     description=description,
     version="0.1.0",
-    lifespan=download_model_on_startup,
+    lifespan=on_startup,
     contact={
         "name": "Mateusz Kowalczyk",
         "url": "https://github.com/mateuszk098",
     },
-    license_info={"name": "MIT License", "url": "https://opensource.org/licenses/MIT"},
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
 )
 app.include_router(user_router)
 app.include_router(admin_router)
 
-
-init_db()
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host=HOST, port=PORT, reload=True)

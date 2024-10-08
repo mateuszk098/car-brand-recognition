@@ -8,15 +8,18 @@ from fastapi import FastAPI
 from fastapi.security import OAuth2PasswordBearer
 from numpy.typing import NDArray
 
-from app.errors import ImageDecodingError
 from resnet import ArchType, SEResNet, download_pretrained_weights, load_se_resnet, predict
+
+from ..data import init_db
+from ..errors import ImageDecodingError
 
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/user/token")
 
 
 @asynccontextmanager
-async def download_model_on_startup(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Download pre-trained weights for SE-ResNet model."""
+async def on_startup(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Initialize the database and download the pre-trained weights on startup."""
+    init_db()
     download_pretrained_weights(ArchType.SEResNet3)
     yield
 

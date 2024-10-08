@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.errors import RecordNotFoundError
-
+from ..errors import RecordNotFoundError
 from .models import Task, User
 
 

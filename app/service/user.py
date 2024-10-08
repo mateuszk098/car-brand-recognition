@@ -2,18 +2,19 @@ from fastapi import UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.errors import (
+from resnet import SEResNet
+
+from ..data.models import Task, User
+from ..data.repositories import TaskRepository, UserRepository
+from ..errors import (
     ImageDecodingError,
+    ImageDecodingHTTPError,
     InvalidPasswordError,
     PasswordMismatchError,
     RecordNotFoundError,
     UserAlreadyExistsError,
     UserNotFoundError,
 )
-from resnet import SEResNet
-
-from ..data.models import Task, User
-from ..data.repositories import TaskRepository, UserRepository
 from ..schema.user import Password, TaskSchema, UserCreate, UserSchema
 from ..service.utils import verify_password
 from .utils import decode_image, encode_password, predict_brand
