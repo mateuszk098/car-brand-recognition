@@ -20,7 +20,9 @@ from .loaders import VehicleDataLoader
 
 load_dotenv(find_dotenv())
 
-logger = init_logger("INFO" if os.getenv("MODE") == "PROD" else "DEBUG")
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+
+logger = init_logger("DEBUG" if DEBUG else "INFO")
 
 
 def train_step(

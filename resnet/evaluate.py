@@ -24,8 +24,10 @@ from resnet.utils.transforms import eval_transform
 
 load_dotenv(find_dotenv())
 
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-logger = init_logger("INFO" if os.getenv("MODE") == "PROD" else "DEBUG")
+
+logger = init_logger("DEBUG" if DEBUG else "INFO")
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -31,8 +31,7 @@ if not torch.cuda.is_available():
 
 load_dotenv(find_dotenv())
 
-logger = init_logger("INFO" if os.getenv("MODE") == "PROD" else "DEBUG")
-
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 SEED = 42
 DEVICE = torch.device("cuda")
 
@@ -42,6 +41,8 @@ torch.cuda.manual_seed(SEED)
 
 mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
 mlflow.set_experiment("network-training")
+
+logger = init_logger("DEBUG" if DEBUG else "INFO")
 
 
 def main(*, config_file: str | PathLike) -> None:
