@@ -2,6 +2,7 @@ services:
   mlflow-db:
     image: postgres:16.4-alpine
     container_name: mlflow-db
+    hostname: ${MLFLOW_POSTGRES_HOSTNAME}
     ports:
       - ${MLFLOW_POSTGRES_PORT}:5432
     environment:
@@ -16,6 +17,7 @@ services:
   app-db:
     image: postgres:16.4-alpine
     container_name: app-db
+    hostname: ${APP_POSTGRES_HOSTNAME}
     ports:
       - ${APP_POSTGRES_PORT}:5432
     environment:
@@ -26,32 +28,6 @@ services:
       - app-net
     volumes:
       - app-data:/var/lib/postgresql/data
-
-  mlflow-server:
-    build:
-      dockerfile: mlflow/Dockerfile
-    image: mlflow:v2.16.1
-    container_name: mlflow-server
-    ports:
-      - ${MLFLOW_PORT}:5000
-    networks:
-      - app-net
-    volumes:
-      - mlflow-runs:/home/mlflow/runs
-    depends_on:
-      - mlflow-db
-    entrypoint: 
-      - mlflow
-      - server
-      - --backend-store-uri
-      - ${MLFLOW_BACKEND_STORE_URI}
-      - --artifacts-destination
-      - file:///home/mlflow/runs
-      - --serve-artifacts
-      - --host
-      - "0.0.0.0"
-      - --port
-      - "5000"
 
   pgadmin4:
     image: dpage/pgadmin4:latest
@@ -67,6 +43,50 @@ services:
       - mlflow-db
       - app-db
 
+  mlflow-server:
+    build:
+      dockerfile: ./mlflow/Dockerfile
+    image: mlflow:v2.16.1
+    container_name: mlflow-server
+    ports:
+      - ${MLFLOW_PORT}:5000
+    networks:
+      - app-net
+    volumes:
+      - mlflow-runs:/home/mlflow/runs
+    depends_on:
+      - mlflow-db
+    entrypoint:
+      - mlflow
+      - server
+      - --backend-store-uri
+      - ${MLFLOW_BACKEND_STORE_URI}
+      - --artifacts-destination
+      - file:///home/mlflow/runs
+      - --serve-artifacts
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "5000"
+
+  car-app:
+    build:
+      context: ..
+      dockerfile: ./build/app/Dockerfile
+    image: car-app:v0.1.0
+    container_name: car-app
+    ports:
+      - 8000:8000
+    environment:
+      - MODEL=SEResNet3
+      - APP_DB_URL=${APP_DB_URL}
+    networks:
+      - app-net
+    depends_on:
+      - app-db
+    entrypoint:
+      [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    
 volumes:
   mlflow-metadata:
     name: mlflow-metadata
