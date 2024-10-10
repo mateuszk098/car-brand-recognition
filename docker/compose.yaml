@@ -3,11 +3,11 @@ services:
     image: postgres:16.4-alpine
     container_name: mlflow-db
     ports:
-      - ${POSTGRES_PORT}:5432
+      - ${MLFLOW_POSTGRES_PORT}:5432
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${MLFLOW_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${MLFLOW_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${MLFLOW_POSTGRES_DB}
     networks:
       - mlflow-net
     volumes:
@@ -30,7 +30,7 @@ services:
       - mlflow
       - server
       - --backend-store-uri
-      - postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mlflow-db:5432/${POSTGRES_DB}
+      - postgresql://${MLFLOW_POSTGRES_USER}:${MLFLOW_POSTGRES_PASSWORD}@mlflow-db:5432/${MLFLOW_POSTGRES_DB}
       - --artifacts-destination
       - file:///home/mlflow/runs
       - --serve-artifacts

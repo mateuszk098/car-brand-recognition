@@ -15,8 +15,8 @@ from .utils import oauth2_bearer, verify_password
 
 load_dotenv(find_dotenv())
 
-SECRET_KEY = os.getenv("SECRET_KEY", "")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 
 def authenticate_user(username: str, password: str, db: Session) -> UserSchema:
@@ -31,13 +31,13 @@ def create_access_token(username: str, expires: timedelta) -> str:
     """Create a JWT access token."""
     expiry_time = datetime.now(UTC) + expires
     payload = {"sub": username, "exp": expiry_time}
-    return jwt.encode(payload, SECRET_KEY, ALGORITHM)
+    return jwt.encode(payload, JWT_SECRET_KEY, JWT_ALGORITHM)
 
 
 def extract_username_from_token(token: str) -> str:
     """Extract the username from a JWT token."""
     try:
-        payload = jwt.decode(token, SECRET_KEY, [ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET_KEY, [JWT_ALGORITHM])
     except PyJWTError:
         raise InvalidCredentialsError()
     else:

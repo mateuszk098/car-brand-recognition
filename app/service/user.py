@@ -100,8 +100,8 @@ async def create_task(upload: UploadFile, topk: int, user_id: int, model: SEResN
             user_id=user_id,
             name=upload.filename,
             content=upload.content_type,
-            brands=", ".join(brands),
-            probs=", ".join(str(p) for p in probs),
+            brands=str(brands),
+            probs=str(probs),
         )
         TaskRepository.create_task(task, db)
         return TaskSchema.model_validate(task)
