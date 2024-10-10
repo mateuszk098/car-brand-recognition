@@ -9,9 +9,23 @@ services:
       POSTGRES_PASSWORD: ${MLFLOW_POSTGRES_PASSWORD}
       POSTGRES_DB: ${MLFLOW_POSTGRES_DB}
     networks:
-      - mlflow-net
+      - app-net
     volumes:
       - mlflow-metadata:/var/lib/postgresql/data
+
+  app-db:
+    image: postgres:16.4-alpine
+    container_name: app-db
+    ports:
+      - ${APP_POSTGRES_PORT}:5432
+    environment:
+      POSTGRES_USER: ${APP_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${APP_POSTGRES_DB}
+    networks:
+      - app-net
+    volumes:
+      - app-data:/var/lib/postgresql/data
 
   mlflow-server:
     build:
@@ -21,7 +35,7 @@ services:
     ports:
       - ${MLFLOW_PORT}:5000
     networks:
-      - mlflow-net
+      - app-net
     volumes:
       - mlflow-runs:/home/mlflow/runs
     depends_on:
@@ -30,7 +44,7 @@ services:
       - mlflow
       - server
       - --backend-store-uri
-      - postgresql://${MLFLOW_POSTGRES_USER}:${MLFLOW_POSTGRES_PASSWORD}@mlflow-db:5432/${MLFLOW_POSTGRES_DB}
+      - ${MLFLOW_BACKEND_STORE_URI}
       - --artifacts-destination
       - file:///home/mlflow/runs
       - --serve-artifacts
@@ -48,9 +62,10 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     networks:
-      - mlflow-net
+      - app-net
     depends_on:
       - mlflow-db
+      - app-db
 
 volumes:
   mlflow-metadata:
@@ -59,8 +74,11 @@ volumes:
   mlflow-runs:
     name: mlflow-runs
     driver: local
+  app-data:
+    name: app-data
+    driver: local
 
 networks:
-  mlflow-net:
+  app-net:
     driver: bridge
-    name: mlflow-net
+    name: app-net
