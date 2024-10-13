@@ -1,5 +1,6 @@
 # Car Brand Recognition
 
+![Static Badge](https://img.shields.io/badge/python-3.12-blue?style=for-the-badge&logo=python&logoColor=white&color=%234584b6)
 ![GitHub License](https://img.shields.io/github/license/mateuszk098/car-brand-recognition?style=for-the-badge&color=%23fa9537) ![GitHub last commit](https://img.shields.io/github/last-commit/mateuszk098/car-brand-recognition?style=for-the-badge&color=%23fa9537)
 
 ## 1. Introduction
