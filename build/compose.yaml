@@ -78,8 +78,10 @@ services:
     ports:
       - 8000:8000
     environment:
-      - MODEL=SEResNet3
-      - BACKEND=openvino
+      - MODEL=${MODEL}
+      - BACKEND=${BACKEND}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
       - APP_DB_URL=${APP_DB_URL}
     networks:
       - app-net

@@ -4,7 +4,7 @@ This project is a FastAPI-based web application that allows users to upload car 
 
 ### Key Features
 
-- **Custom Deep Learning Model**: Built with advanced layers, including **Residual** and **Squeeze-and-Excitation** blocks, the model can accurately classify cars from a selection of 25 brands.
+- **Custom Deep Learning Model**: Built with lazy layers, including **Residual** and **Squeeze-and-Excitation** blocks, the model can accurately classify cars from a selection of 25 brands.
 - **Multiple Car Brands Supported**: Audi, BMW, Toyota, and more...
 - **Top K Predictions**: Users can request the top K most probable car brands, allowing for detailed feedback on possible matches.
   
