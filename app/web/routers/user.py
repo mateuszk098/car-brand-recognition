@@ -65,7 +65,7 @@ async def get_current_user_info(user: UserDep) -> UserSchema:
 
 
 @router.post(
-    "/tasks/predict",
+    "/tasks/create",
     response_model=TaskSchema,
     status_code=status.HTTP_201_CREATED,
     summary="Predict Car Brand",
