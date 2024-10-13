@@ -1,9 +1,11 @@
+"""Authentication via JWT."""
+
 import os
 from datetime import UTC, datetime, timedelta
 
 import jwt
 from dotenv import find_dotenv, load_dotenv
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from jwt.exceptions import PyJWTError
 from sqlalchemy.orm import Session
 
@@ -48,5 +50,10 @@ def extract_username_from_token(token: str) -> str:
 
 
 async def get_current_user(token: str = Depends(oauth2_bearer), db: Session = Depends(get_db)) -> UserSchema:
-    username = extract_username_from_token(token)
-    return get_user_by_username(username, db)
+    """Get the current user from a JWT token."""
+    try:
+        username = extract_username_from_token(token)
+    except InvalidCredentialsError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.detail)
+    else:
+        return get_user_by_username(username, db)

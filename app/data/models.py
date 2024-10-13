@@ -1,3 +1,5 @@
+"""Database models for the application."""
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String
@@ -6,6 +8,8 @@ from sqlalchemy.sql import func
 
 
 class Base(DeclarativeBase):
+    """Base class for all database models."""
+
     pass
 
 

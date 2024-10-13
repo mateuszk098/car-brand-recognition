@@ -1,3 +1,5 @@
+"""Inference module with support for multiple backends PyTorch and OpenVINO."""
+
 from os import PathLike
 from pathlib import Path
 
@@ -8,38 +10,12 @@ from numpy.typing import ArrayLike
 from openvino import CompiledModel
 from torch import Tensor
 
-from resnet.network.arch import ArchType, SEResNet, init_se_resnet
-from resnet.utils.transforms import eval_transform
-
+from ..config import ConfigFile
+from ..network.arch import ArchType, SEResNet, init_se_resnet
+from ..utils.transforms import eval_transform
 from .utils import BackendType, WeightsDownloader
 
-CLASS_TO_IDX: dict[str, int] = {
-    "Acura": 0,
-    "Alfa Romeo": 1,
-    "Audi": 2,
-    "BMW": 3,
-    "Bentley": 4,
-    "Bugatti Veyron": 5,
-    "Cadillac Escalade": 6,
-    "Cadillac SRX": 7,
-    "Chevrolet Camaro": 8,
-    "Chevrolet Corvette": 9,
-    "Dodge": 10,
-    "Ferrari": 11,
-    "Ford Mustang": 12,
-    "Hyundai": 13,
-    "Jeep Liberty": 14,
-    "Kia": 15,
-    "Lamborghini": 16,
-    "Lexus": 17,
-    "Maserati": 18,
-    "Mercedes": 19,
-    "Mitsubishi Lancer": 20,
-    "Porsche": 21,
-    "Renault": 22,
-    "Rolls Royce": 23,
-    "Toyota": 24,
-}
+CLASS_TO_IDX: dict[str, int] = ConfigFile.CLASSES.load()
 
 
 def load_se_resnet(arch_type: str | ArchType, weights: str | PathLike) -> SEResNet:
@@ -58,7 +34,7 @@ def torch2openvino(arch_type: str | ArchType, weights: str | PathLike, batch_siz
     traced_model = torch.jit.trace(model, example_input)
     ov_model = ov.convert_model(
         traced_model,
-        input=[batch_size, 3, *input_shape],
+        input=[batch_size, 3, *input_shape],  # Dynamic when batch_size=-1.
         example_input=example_input,
     )
     ov.save_model(ov_model, Path(weights).with_suffix(".xml"))
@@ -92,6 +68,7 @@ class OpenVINOBackend:
 
     def __init__(self, model: str | PathLike, weights: str | PathLike) -> None:
         self._model = self._init_model(model, weights)
+        # Last two dimensions are the image dimensions - always constant.
         self._input_shape = tuple(self.model.input().partial_shape[-2:].to_shape())
 
     def __call__(self, x: Tensor) -> Tensor:
@@ -132,18 +109,20 @@ class CarClassifier:
         return self._backend
 
     def predict(self, image: ArrayLike, topk: int = 5) -> list[tuple[str, float]]:
+        """Predicts the car brand from the image."""
         topk = self._check_topk(topk)
         processed_img = self._preprocess(image)
-        with torch.inference_mode():
-            logits = self.backend(processed_img)
+        logits = self.backend(processed_img)
         return self._postprocess(logits, topk)
 
     def _preprocess(self, image: ArrayLike) -> Tensor:
+        """Preprocesses the image for inference."""
         img = np.asarray(image, dtype=np.uint8)
         transform = eval_transform(self.backend.input_shape)
         return transform(img).unsqueeze(0)  # type: ignore
 
     def _postprocess(self, logits: Tensor, topk: int = 5) -> list[tuple[str, float]]:
+        """Postprocesses the logits to get the topk classes with probabilities."""
         probs = torch.softmax(logits, dim=-1)
         top_ids = torch.topk(probs, topk).indices.numpy()
         idx_to_class = {v: k for k, v in CLASS_TO_IDX.items()}
@@ -158,6 +137,7 @@ class CarClassifier:
         return classes_with_probs
 
     def _get_backend(self) -> PyTorchBackend | OpenVINOBackend:
+        """Initializes the backend based on the backend type."""
         if self._backend_type == BackendType.PYTORCH:
             weights = self._downloader.download_pytorch(self._arch_type)
             return PyTorchBackend(self._arch_type, weights)
@@ -169,6 +149,7 @@ class CarClassifier:
         raise ValueError(f"Unknown backend type: {self._backend_type!r}")
 
     def _check_topk(self, topk: int) -> int:
+        """Checks if topk is valid - greater than 0 and less than the number of classes."""
         if topk < 1:
             raise ValueError("Topk must be greater than 0.")
         n_classes = len(CLASS_TO_IDX)

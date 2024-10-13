@@ -1,3 +1,5 @@
+"""Test utilities for the application."""
+
 from typing import Generator
 
 import pytest
@@ -20,6 +22,7 @@ Base.metadata.create_all(engine)
 
 @pytest.fixture(scope="function")
 def db_session() -> Generator[Session, None, None]:
+    """Create a new database session for a test."""
     session = session_factory()
     try:
         yield session
@@ -30,6 +33,7 @@ def db_session() -> Generator[Session, None, None]:
 
 @pytest.fixture(scope="function")
 def db_user(db_session: Session) -> Generator[User, None, None]:
+    """Create a new user for a test."""
     user = User(
         username="johndoe",
         email="johndoe@gmail.com",
@@ -50,6 +54,7 @@ def db_user(db_session: Session) -> Generator[User, None, None]:
 
 @pytest.fixture(scope="function")
 def db_task(db_session: Session) -> Generator[Task, None, None]:
+    """Create a new task for a test."""
     task = Task(
         user_id=1,
         name="test_task",

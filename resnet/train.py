@@ -1,3 +1,5 @@
+"""Train a car braand recognition model using a ResNet architecture."""
+
 import math
 import os
 from argparse import ArgumentParser

@@ -1,3 +1,5 @@
+"""Main module of the application."""
+
 import os
 from pathlib import Path
 

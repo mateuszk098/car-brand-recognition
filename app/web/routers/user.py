@@ -1,3 +1,5 @@
+"""User API Router."""
+
 from datetime import timedelta
 from typing import Annotated
 
@@ -22,6 +24,7 @@ router = APIRouter(prefix="/user", tags=["User"])
     include_in_schema=False,
 )
 async def create_access_token(form_data: LoginDep, db: DBDep) -> Token:
+    """Create an access token for a user."""
     try:
         user = auth.authenticate_user(form_data.username, form_data.password, db)
     except UserNotFoundError as e:
@@ -41,6 +44,7 @@ async def create_access_token(form_data: LoginDep, db: DBDep) -> Token:
     summary="Register New User",
 )
 async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema:
+    """Register a new user."""
     try:
         return service.create_user(user, db)
     except UserAlreadyExistsError as e:
@@ -56,6 +60,7 @@ async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema
     summary="Get User Information",
 )
 async def get_current_user_info(user: UserDep) -> UserSchema:
+    """Get the current user information."""
     return user
 
 
@@ -72,6 +77,7 @@ async def create_task(
     model: ModelDep,
     topk: int = Query(default=5, gt=0, description="Number of top brands from prediction."),
 ) -> TaskSchema:
+    """Create a new prediction task for a user."""
     task = await service.create_task(image, topk, user.id, model, db)
     return task
 
@@ -83,4 +89,5 @@ async def create_task(
     summary="Get All User Tasks",
 )
 async def get_user_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
+    """Get all tasks for a user."""
     return service.get_tasks_for_user(user.id, db)

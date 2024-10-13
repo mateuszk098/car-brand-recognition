@@ -1,3 +1,5 @@
+"""Admin API Router."""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Form, HTTPException, status
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
     summary="Get User by Username",
 )
 async def get_user_by_username(username: str, user: UserDep, db: DBDep) -> UserSchema:
+    """Get a user by its username."""
     if user.role != Role.admin:
         raise ForbiddenHTTPError()
     try:
@@ -33,6 +36,7 @@ async def get_user_by_username(username: str, user: UserDep, db: DBDep) -> UserS
     summary="Get All Users",
 )
 async def get_users(user: UserDep, db: DBDep) -> list[UserSchema]:
+    """Get all users from the database."""
     if user.role != Role.admin:
         raise ForbiddenHTTPError()
     return service.get_users(db)
@@ -50,6 +54,7 @@ async def delete_user(
     user: UserDep,
     db: DBDep,
 ) -> None:
+    """Delete a user by its username."""
     if user.role != Role.admin:
         raise ForbiddenHTTPError()
     try:

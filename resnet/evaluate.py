@@ -1,3 +1,5 @@
+"""Evaluate the model on the validation dataset."""
+
 import os
 from argparse import ArgumentParser
 from dataclasses import dataclass
@@ -32,6 +34,8 @@ logger = init_logger("DEBUG" if DEBUG else "INFO")
 
 @dataclass(frozen=True, kw_only=True)
 class EvaluationResult:
+    """Evaluation results for the model."""
+
     Loss: float
     Accuracy: float
     Precision: float
@@ -46,6 +50,7 @@ def evaluate(
     average: Literal["micro", "macro", "weighted", "none"] | None = "macro",
     normalize: Literal["none", "true", "pred", "all"] | None = None,
 ) -> EvaluationResult:
+    """Evaluate the model on the validation dataset."""
     model.eval()
     loader.eval()
 

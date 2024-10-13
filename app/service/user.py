@@ -1,3 +1,5 @@
+"""User service module."""
+
 from fastapi import UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session

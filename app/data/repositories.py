@@ -1,3 +1,5 @@
+"""Repository classes for handling CRUD operations for users and tasks."""
+
 from sqlalchemy.orm import Session
 
 from ..errors import RecordNotFoundError

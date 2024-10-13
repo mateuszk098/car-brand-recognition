@@ -1,3 +1,5 @@
+"""Pydantic models for user and task schemas."""
+
 from datetime import datetime
 from enum import StrEnum, auto
 
@@ -12,6 +14,8 @@ class Role(StrEnum):
 
 
 class Password(BaseModel):
+    """Represents password schema."""
+
     password: SecretStr = Field(min_length=8, max_length=64, description="Password")
     confirm_password: SecretStr = Field(min_length=8, max_length=64, description="Confirm Password")
 

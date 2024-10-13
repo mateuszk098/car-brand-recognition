@@ -35,6 +35,7 @@ def train_step(
     l1_weight: float = 0.0,
     l2_weight: float = 0.0,
 ) -> None:
+    """Training step for the model."""
     model.train()
     loader.train()
 
@@ -88,6 +89,7 @@ def valid_step(
     metric: Metric,
     device: str | torch.device,
 ) -> tuple[float, float]:
+    """Validation step for the model."""
     model.eval()
     loader.eval()
     metric.reset()
@@ -118,6 +120,7 @@ def fit(
     epochs: int = 100,
     callbacks: list[Callback] | None = None,
 ) -> dict[RecordedStats, list[float]]:
+    """Training loop for the model."""
 
     start_epoch: int = 1
     history = defaultdict(list)

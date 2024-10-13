@@ -1,3 +1,5 @@
+"""Utility functions for the service layer."""
+
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator

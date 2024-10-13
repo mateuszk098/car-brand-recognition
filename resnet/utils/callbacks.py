@@ -45,7 +45,7 @@ class Checkpoint(metaclass=ABCMeta):
 
     @abstractmethod
     def save(self, history: History) -> None:
-        raise NotImplementedError
+        pass
 
     def load(self) -> PathLike:
         """Returns the latest run directory."""

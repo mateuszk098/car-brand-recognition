@@ -1,3 +1,5 @@
+"""Utility functions for downloading pre-trained weights."""
+
 from enum import StrEnum, auto
 from os import PathLike
 from pathlib import Path
@@ -45,6 +47,7 @@ class WeightsDownloader:
         self._directory = Path(directory)
 
     def download_pytorch(self, arch_type: str | ArchType) -> Path:
+        """Downloads pre-trained PyTorch weights."""
         arch_type = ArchType(arch_type)
         self._create_dest_path()
 
@@ -55,6 +58,7 @@ class WeightsDownloader:
         return pt_file
 
     def download_openvino(self, arch_type: str | ArchType) -> tuple[Path, Path]:
+        """Downloads pre-trained OpenVINO weights."""
         arch_type = ArchType(arch_type)
         self._create_dest_path()
 

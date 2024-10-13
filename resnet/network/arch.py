@@ -95,6 +95,7 @@ class SEResNet(nn.Module):
         return self.feed_forward(x)
 
     def warmup(self) -> Self:
+        """Initialize layers' dimensions by passing random data through it."""
         input_shape = self.architecture.INPUT_SHAPE
         x = torch.randn(10, 3, *input_shape, generator=torch.manual_seed(42))
         self.feed_forward(x)
@@ -102,12 +103,14 @@ class SEResNet(nn.Module):
 
 
 def get_se_resnet_arch(arch_type: str | ArchType) -> SEResNetArch:
+    """Returns the architecture of the Squeeze and Excitation ResNet model."""
     arch_type = ArchType(arch_type)
     arch = ConfigFile.ARCH.load().get(arch_type)
     return SEResNetArch(**arch)
 
 
 def init_se_resnet(arch_type: str | ArchType, num_classes: int) -> SEResNet:
+    """Initializes the Squeeze and Excitation ResNet model."""
     model = SEResNet(num_classes, get_se_resnet_arch(arch_type))
     return model.warmup()
 

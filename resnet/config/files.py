@@ -18,12 +18,13 @@ class FileDetails:
 
 @unique
 class ConfigFile(Enum):
-    """Represents available configuration files."""
+    """Represents available configuration files. Example usage: `ConfigFile.ARCH.load()`."""
 
     ARCH = FileDetails(NAME="arch.yaml")
     LOGGING = FileDetails(NAME="logging.yaml")
     TRAIN = FileDetails(NAME="train.yaml")
     EVAL = FileDetails(NAME="eval.yaml")
+    CLASSES = FileDetails(NAME="classes.yaml")
 
     def __init__(self, file_data: FileDetails) -> None:
         self.file_data = file_data
