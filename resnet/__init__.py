@@ -1,10 +1,9 @@
-from resnet.inference import download_pretrained_weights, load_se_resnet, predict
-from resnet.network.arch import ArchType, SEResNet
+from resnet.inference.multibackend import CarClassifier
+from resnet.inference.utils import BackendType
+from resnet.network.arch import ArchType
 
 __all__ = [
-    "load_se_resnet",
-    "predict",
-    "download_pretrained_weights",
+    "CarClassifier",
+    "BackendType",
     "ArchType",
-    "SEResNet",
 ]

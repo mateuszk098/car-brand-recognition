@@ -17,7 +17,7 @@ from torch import Tensor
 from torch.nn import Module
 from torchvision.datasets import ImageFolder
 
-from resnet.inference import load_se_resnet
+from resnet.inference.multibackend import load_se_resnet
 from resnet.utils.common import init_logger, load_yaml
 from resnet.utils.loaders import VehicleDataLoader
 from resnet.utils.transforms import eval_transform

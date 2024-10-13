@@ -2,7 +2,7 @@ from fastapi import UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from resnet import SEResNet
+from resnet import CarClassifier
 
 from ..data.models import Task, User
 from ..data.repositories import TaskRepository, UserRepository
@@ -17,7 +17,7 @@ from ..errors import (
 )
 from ..schema.user import Password, TaskSchema, UserCreate, UserSchema
 from ..service.utils import verify_password
-from .utils import decode_image, encode_password, predict_brand
+from .utils import decode_image, encode_password
 
 
 def get_user_by_username(username: str, db: Session) -> UserSchema:
@@ -86,7 +86,7 @@ def get_tasks_for_user(user_id: int, db: Session) -> list[TaskSchema]:
     return list(TaskSchema.model_validate(task) for task in tasks)
 
 
-async def create_task(upload: UploadFile, topk: int, user_id: int, model: SEResNet, db: Session) -> TaskSchema:
+async def create_task(upload: UploadFile, topk: int, user_id: int, model: CarClassifier, db: Session) -> TaskSchema:
     """Create a deep learning model's prediction task for a given user."""
     try:
         file_content = await upload.read()
@@ -94,7 +94,7 @@ async def create_task(upload: UploadFile, topk: int, user_id: int, model: SEResN
     except ImageDecodingError:
         raise ImageDecodingHTTPError()
     else:
-        prediction = await predict_brand(image, model, topk)
+        prediction = model(image, topk)
         brands, probs = zip(*prediction)
         task = Task(
             user_id=user_id,
