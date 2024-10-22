@@ -6,13 +6,7 @@ from typing import Annotated
 import plotly.express as px
 from fastapi import APIRouter, Form, HTTPException, Query, Response, UploadFile, status
 
-from app.errors import (
-    EmailAlreadyExistsError,
-    InvalidPasswordError,
-    PasswordMismatchError,
-    UserAlreadyExistsError,
-    UserNotFoundError,
-)
+from app import errors
 from app.schema.user import TaskSchema, Token, UserCreate, UserSchema
 from app.service import auth
 from app.service import user as service
@@ -34,9 +28,9 @@ async def create_access_token(form_data: LoginDep, db: DBDep) -> Token:
     """Create an access token for a user."""
     try:
         user = auth.authenticate_user(form_data.username, form_data.password, db)
-    except UserNotFoundError as e:
+    except errors.UserNotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=e.detail)
-    except InvalidPasswordError as e:
+    except errors.InvalidPasswordError as e:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=e.detail)
     else:
         expires = timedelta(hours=ACCESS_TOKEN_EXPIRES_HOURS)
@@ -54,11 +48,11 @@ async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema
     """Register a new user."""
     try:
         return service.create_user(user, db)
-    except PasswordMismatchError as e:
+    except errors.PasswordMismatchError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
-    except UserAlreadyExistsError as e:
+    except errors.UserAlreadyExistsError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
-    except EmailAlreadyExistsError as e:
+    except errors.EmailAlreadyExistsError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
 
 

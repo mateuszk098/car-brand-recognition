@@ -3,11 +3,13 @@
 from typing import Generator
 
 import pytest
+from pydantic import SecretStr
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.data.models import Base, Task, User
+from app.schema.user import Role, UserCreate
 
 APP_DB_URL = "sqlite:///:memory:"
 
@@ -46,6 +48,25 @@ def db_user(db_session: Session) -> Generator[User, None, None]:
     db_session.commit()
     try:
         yield user
+    finally:
+        with engine.connect() as connection:
+            connection.execute(text("DELETE FROM users;"))
+            connection.commit()
+
+
+@pytest.fixture(scope="function")
+def user_create() -> Generator[UserCreate, None, None]:
+    new_user = UserCreate(
+        password=SecretStr("password"),
+        confirm_password=SecretStr("password"),
+        username="janedoe",
+        email="janedoe@gmail.com",
+        first_name="Jane",
+        last_name="Doe",
+        role=Role.user,
+    )
+    try:
+        yield new_user
     finally:
         with engine.connect() as connection:
             connection.execute(text("DELETE FROM users;"))

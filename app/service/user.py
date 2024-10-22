@@ -5,18 +5,9 @@ from sqlalchemy.orm import Session
 
 from resnet import CarClassifier
 
+from .. import errors
 from ..data.models import Task, User
 from ..data.repositories import TaskRepository, UserRepository
-from ..errors import (
-    EmailAlreadyExistsError,
-    ImageDecodingError,
-    ImageDecodingHTTPError,
-    InvalidPasswordError,
-    PasswordMismatchError,
-    RecordNotFoundError,
-    UserAlreadyExistsError,
-    UserNotFoundError,
-)
 from ..schema.user import Password, TaskSchema, UserCreate, UserSchema
 from ..service.utils import verify_password
 from .utils import decode_image, encode_password
@@ -26,8 +17,8 @@ def get_user_by_username(username: str, db: Session) -> UserSchema:
     """Get a user by username."""
     try:
         user = UserRepository.get_user_by_username(username, db)
-    except RecordNotFoundError:
-        raise UserNotFoundError(username)
+    except errors.RecordNotFoundError:
+        raise errors.UserNotFoundError(username)
     else:
         return UserSchema.model_validate(user)
 
@@ -44,21 +35,21 @@ def create_user(user: UserCreate, db: Session) -> UserSchema:
     confirm_password = user.confirm_password.get_secret_value()
 
     if password != confirm_password:
-        raise PasswordMismatchError()
+        raise errors.PasswordMismatchError()
 
     try:
         existing_user = UserRepository.get_user_by_username(user.username, db)
-    except RecordNotFoundError:
+    except errors.RecordNotFoundError:
         pass
     else:
-        raise UserAlreadyExistsError(existing_user.username)
+        raise errors.UserAlreadyExistsError(existing_user.username)
 
     try:
         existing_user = UserRepository.get_user_by_email(user.email, db)
-    except RecordNotFoundError:
+    except errors.RecordNotFoundError:
         pass
     else:
-        raise EmailAlreadyExistsError(existing_user.email)
+        raise errors.EmailAlreadyExistsError(existing_user.email)
 
     new_user = User(
         username=user.username,
@@ -79,15 +70,15 @@ def delete_user_by_username(username: str, admin_password: Password, admin_user:
     confirm_password = admin_password.confirm_password.get_secret_value()
 
     if password != confirm_password:
-        raise PasswordMismatchError()
+        raise errors.PasswordMismatchError()
 
     if not verify_password(password, admin_user.hashed_password):
-        raise InvalidPasswordError()
+        raise errors.InvalidPasswordError()
 
     try:
         user = UserRepository.get_user_by_username(username, db)
-    except RecordNotFoundError:
-        raise UserNotFoundError(username)
+    except errors.RecordNotFoundError:
+        raise errors.UserNotFoundError(username)
     else:
         UserRepository.delete_user(user, db)
 
@@ -103,8 +94,8 @@ async def create_task(upload: UploadFile, topk: int, user_id: int, model: CarCla
     try:
         file_content = await upload.read()
         image = decode_image(file_content)
-    except ImageDecodingError:
-        raise ImageDecodingHTTPError()
+    except errors.ImageDecodingError:
+        raise errors.ImageDecodingHTTPError()
     else:
         prediction = model(image, topk)
         brands, probs = zip(*prediction)
