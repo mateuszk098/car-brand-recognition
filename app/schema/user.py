@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import StrEnum, auto
 
-from pydantic import BaseModel, EmailStr, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr
 
 
 class Role(StrEnum):
@@ -51,8 +51,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase, Password):
     """Represents user creation schema."""
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "username": "john_doe",
                 "email": "johndoe@gmail.com",
@@ -63,6 +63,7 @@ class UserCreate(UserBase, Password):
                 "confirm_password": "secret123",
             }
         }
+    )
 
 
 class UserSchema(UserBase):
@@ -72,9 +73,9 @@ class UserSchema(UserBase):
     id: int
     hashed_password: bytes
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,  # Needed to convert from SQLAlchemy model
+        json_schema_extra={
             "example": {
                 "time_created": "2021-01-01T00:00:00",
                 "id": 1,
@@ -85,7 +86,8 @@ class UserSchema(UserBase):
                 "role": "user",
                 "hashed_password": "hashed_secret",
             }
-        }
+        },
+    )
 
 
 class TaskSchema(BaseModel):
@@ -99,9 +101,9 @@ class TaskSchema(BaseModel):
     brands: str
     probs: str
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "time_created": "2021-01-01T00:00:00",
                 "id": 1,
@@ -111,7 +113,8 @@ class TaskSchema(BaseModel):
                 "brands": "'Audi', 'BMW', 'Ford'",
                 "probs": "0.8, 0.1, 0.05",
             }
-        }
+        },
+    )
 
 
 class Token(BaseModel):

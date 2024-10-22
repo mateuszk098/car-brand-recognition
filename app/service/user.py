@@ -1,7 +1,6 @@
 """User service module."""
 
 from fastapi import UploadFile
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from resnet import CarClassifier
@@ -9,6 +8,7 @@ from resnet import CarClassifier
 from ..data.models import Task, User
 from ..data.repositories import TaskRepository, UserRepository
 from ..errors import (
+    EmailAlreadyExistsError,
     ImageDecodingError,
     ImageDecodingHTTPError,
     InvalidPasswordError,
@@ -46,6 +46,20 @@ def create_user(user: UserCreate, db: Session) -> UserSchema:
     if password != confirm_password:
         raise PasswordMismatchError()
 
+    try:
+        existing_user = UserRepository.get_user_by_username(user.username, db)
+    except RecordNotFoundError:
+        pass
+    else:
+        raise UserAlreadyExistsError(existing_user.username)
+
+    try:
+        existing_user = UserRepository.get_user_by_email(user.email, db)
+    except RecordNotFoundError:
+        pass
+    else:
+        raise EmailAlreadyExistsError(existing_user.email)
+
     new_user = User(
         username=user.username,
         email=user.email,
@@ -55,12 +69,8 @@ def create_user(user: UserCreate, db: Session) -> UserSchema:
         hashed_password=encode_password(password),
     )
 
-    try:
-        new_user = UserRepository.create_user(new_user, db)
-    except IntegrityError:
-        raise UserAlreadyExistsError(user.username)
-    else:
-        return UserSchema.model_validate(new_user)
+    new_user = UserRepository.create_user(new_user, db)
+    return UserSchema.model_validate(new_user)
 
 
 def delete_user_by_username(username: str, admin_password: Password, admin_user: UserSchema, db: Session) -> None:

@@ -10,8 +10,6 @@ from sqlalchemy.sql import func
 class Base(DeclarativeBase):
     """Base class for all database models."""
 
-    pass
-
 
 class User(Base):
     """Database model of a user."""
@@ -21,7 +19,7 @@ class User(Base):
     time_created: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String, unique=True, index=True)
-    email: Mapped[str] = mapped_column(String, unique=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True)
     first_name: Mapped[str] = mapped_column(String)
     last_name: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String)

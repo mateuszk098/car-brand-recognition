@@ -18,6 +18,14 @@ class UserRepository:
         return user
 
     @staticmethod
+    def get_user_by_email(email: str, db: Session) -> User:
+        """Get a user by email."""
+        user = db.query(User).filter(User.email == email).first()
+        if user is None:
+            raise RecordNotFoundError("User")
+        return user
+
+    @staticmethod
     def get_user_by_id(user_id: int, db: Session) -> User:
         """Get a user by its ID."""
         user = db.query(User).filter(User.id == user_id).first()

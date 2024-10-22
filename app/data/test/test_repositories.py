@@ -24,6 +24,21 @@ def test_get_user_by_username_fail(db_session: Session) -> None:
     assert e.value.detail == "User not found"
 
 
+def test_get_user_by_email_success(db_user: User, db_session: Session) -> None:
+    result = UserRepository.get_user_by_email("johndoe@gmail.com", db_session)
+    assert result.username == db_user.username
+    assert result.email == db_user.email
+    assert result.first_name == db_user.first_name
+    assert result.last_name == db_user.last_name
+    assert result.role == db_user.role
+
+
+def test_get_user_by_email_fail(db_session: Session) -> None:
+    with pytest.raises(RecordNotFoundError) as e:
+        UserRepository.get_user_by_email("notexist@gmail.com", db_session)
+    assert e.value.detail == "User not found"
+
+
 def test_get_user_by_id_success(db_user: User, db_session: Session) -> None:
     result = UserRepository.get_user_by_id(1, db_session)
     assert result.username == db_user.username
@@ -65,7 +80,7 @@ def test_create_user_success(db_session: Session) -> None:
 def test_create_user_fail_username_exists(db_user: User, db_session: Session) -> None:
     user = User(
         username="johndoe",
-        email="johndoe@gmail.com",
+        email="johndoe111@gmail.com",
         first_name="John",
         last_name="Doe",
         role="user",

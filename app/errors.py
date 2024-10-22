@@ -41,6 +41,13 @@ class UserAlreadyExistsError(AppError):
         super().__init__(f"User {username} already exists")
 
 
+class EmailAlreadyExistsError(AppError):
+    """Raised when an email already exists in database."""
+
+    def __init__(self, email: str) -> None:
+        super().__init__(f"Email {email} already exists")
+
+
 class InvalidPasswordError(AppError):
     """Raised when an existing user enters an invalid password."""
 

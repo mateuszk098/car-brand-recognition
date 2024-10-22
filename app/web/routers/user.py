@@ -3,9 +3,16 @@
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Form, HTTPException, Query, UploadFile, status
+import plotly.express as px
+from fastapi import APIRouter, Form, HTTPException, Query, Response, UploadFile, status
 
-from app.errors import InvalidPasswordError, PasswordMismatchError, UserAlreadyExistsError, UserNotFoundError
+from app.errors import (
+    EmailAlreadyExistsError,
+    InvalidPasswordError,
+    PasswordMismatchError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 from app.schema.user import TaskSchema, Token, UserCreate, UserSchema
 from app.service import auth
 from app.service import user as service
@@ -47,9 +54,11 @@ async def register(user: Annotated[UserCreate, Form()], db: DBDep) -> UserSchema
     """Register a new user."""
     try:
         return service.create_user(user, db)
+    except PasswordMismatchError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
     except UserAlreadyExistsError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
-    except PasswordMismatchError as e:
+    except EmailAlreadyExistsError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
 
 
@@ -91,3 +100,11 @@ async def create_task(
 async def get_user_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
     """Get all tasks for a user."""
     return service.get_tasks_for_user(user.id, db)
+
+
+# @router.get("/test")
+# def test():
+#     df = px.data.iris()
+#     fig = px.scatter(df, x="sepal_width", y="sepal_length", color="species")
+#     fig_bytes = fig.to_image(format="png")
+#     return Response(content=fig_bytes, media_type="image/png")
