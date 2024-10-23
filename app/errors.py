@@ -76,7 +76,7 @@ class UnauthorizedError(AppError):
         super().__init__("Unauthorized access")
 
 
-class ImageDecodingError(Exception):
+class ImageDecodingError(AppError):
     """Raised when an image cannot be decoded."""
 
     def __init__(self) -> None:
@@ -98,14 +98,4 @@ class ForbiddenHTTPError(HTTPError):
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not allowed to perform this action",
-        )
-
-
-class ImageDecodingHTTPError(HTTPError):
-    """HTTPException raised when an image cannot be decoded."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot decode image",
         )

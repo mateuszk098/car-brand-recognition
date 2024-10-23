@@ -81,8 +81,12 @@ async def create_task(
     topk: int = Query(default=5, gt=0, description="Number of top brands from prediction."),
 ) -> TaskSchema:
     """Create a new prediction task for a user."""
-    task = await service.create_task(image, topk, user.id, model, db)
-    return task
+    try:
+        task = await service.create_task(image, topk, user.id, model, db)
+    except errors.ImageDecodingError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=e.detail)
+    else:
+        return task
 
 
 @router.get(

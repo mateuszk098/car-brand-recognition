@@ -14,7 +14,16 @@ from .utils import decode_image, encode_password
 
 
 def get_user_by_username(username: str, db: Session) -> UserSchema:
-    """Get a user by username."""
+    """
+    Retrieve a user by their username.
+    Args:
+        username (str): The username of the user to retrieve.
+        db (Session): The database session to use for the query.
+    Returns:
+        UserSchema: The schema representing the retrieved user.
+    Raises:
+        UserNotFoundError: If no user with the given username is found.
+    """
     try:
         user = UserRepository.get_user_by_username(username, db)
     except errors.RecordNotFoundError:
@@ -24,13 +33,30 @@ def get_user_by_username(username: str, db: Session) -> UserSchema:
 
 
 def get_users(db: Session) -> list[UserSchema]:
-    """Get all the existing users."""
+    """
+    Retrieve all existing users from the database.
+    Args:
+        db (Session): The database session used to query users.
+    Returns:
+        list[UserSchema]: A list of user schemas representing the users.
+    """
     users = UserRepository.get_users(db)
     return list(UserSchema.model_validate(user) for user in users)
 
 
 def create_user(user: UserCreate, db: Session) -> UserSchema:
-    """Create a new user in database."""
+    """
+    Creates a new user in the database.
+    Args:
+        user (UserCreate): An object containing the user details to be created.
+        db (Session): The database session to use for the operation.
+    Returns:
+        UserSchema: The created user object validated against the UserSchema.
+    Raises:
+        PasswordMismatchError: If the provided password and confirm password do not match.
+        UserAlreadyExistsError: If a user with the provided username already exists.
+        EmailAlreadyExistsError: If a user with the provided email already exists.
+    """
     password = user.password.get_secret_value()
     confirm_password = user.confirm_password.get_secret_value()
 
@@ -65,7 +91,18 @@ def create_user(user: UserCreate, db: Session) -> UserSchema:
 
 
 def delete_user_by_username(username: str, admin_password: Password, admin_user: UserSchema, db: Session) -> None:
-    """Delete a user by username."""
+    """
+    Deletes a user by their username after verifying the admin's password.
+    Args:
+        username (str): The username of the user to be deleted.
+        admin_password (Password): The admin's password object containing the password and its confirmation.
+        admin_user (UserSchema): The admin user's schema containing the hashed password.
+        db (Session): The database session to use for the operation.
+    Raises:
+        PasswordMismatchError: If the admin's password and confirmation password do not match.
+        InvalidPasswordError: If the admin's password is invalid.
+        UserNotFoundError: If the user with the given username is not found.
+    """
     password = admin_password.password.get_secret_value()
     confirm_password = admin_password.confirm_password.get_secret_value()
 
@@ -84,19 +121,35 @@ def delete_user_by_username(username: str, admin_password: Password, admin_user:
 
 
 def get_tasks_for_user(user_id: int, db: Session) -> list[TaskSchema]:
-    """Get all tasks for a user."""
+    """
+    Retrieve tasks for a specific user from the database.
+    Args:
+        user_id (int): The ID of the user whose tasks are to be retrieved.
+        db (Session): The database session used to query the tasks.
+    Returns:
+        list[TaskSchema]: A list of TaskSchema objects representing the user's tasks.
+    """
     tasks = TaskRepository.get_tasks_for_user(user_id, db)
     return list(TaskSchema.model_validate(task) for task in tasks)
 
 
 async def create_task(upload: UploadFile, topk: int, user_id: int, model: CarClassifier, db: Session) -> TaskSchema:
-    """Create a deep learning model's prediction task for a given user."""
+    """
+    Creates a new task for car brand recognition.
+    Args:
+        upload (UploadFile): The uploaded file containing the image to be processed.
+        topk (int): The number of top predictions to return.
+        user_id (int): The ID of the user creating the task.
+        model (CarClassifier): The car classifier model used for making predictions.
+        db (Session): The database session for performing database operations.
+    Returns:
+        TaskSchema: The schema representing the created task.
+    Raises:
+        ImageDecodingHTTPError: If there is an error decoding the image.
+    """
     try:
         file_content = await upload.read()
         image = decode_image(file_content)
-    except errors.ImageDecodingError:
-        raise errors.ImageDecodingHTTPError()
-    else:
         prediction = model(image, topk)
         brands, probs = zip(*prediction)
         task = Task(
