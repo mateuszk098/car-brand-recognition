@@ -1,4 +1,20 @@
-"""Squeeze and Excitation ResNet architecture for classification tasks."""
+"""
+This module defines the architecture and initialization of the Squeeze and Excitation ResNet model.
+
+Classes:
+    - ArchType (StrEnum): Enum representing available architecture types for 
+        the Squeeze and Excitation ResNet model.
+    - SEResNetArch (dataclass): Represents the architecture of the Squeeze and Excitation ResNet model.
+    - SEResNet (nn.Module): Squeeze and Excitation Residual Network for classification tasks.
+    
+Functions:
+    - get_se_resnet_arch(arch_type: str | ArchType) -> SEResNetArch:
+        Returns the architecture of the Squeeze and Excitation ResNet model.
+    - init_se_resnet(arch_type: str | ArchType, num_classes: int) -> SEResNet:
+        Initializes the Squeeze and Excitation ResNet model.
+    - arch_summary(model: Module) -> str:
+        Returns the architecture summary of the model.
+"""
 
 from dataclasses import dataclass
 from enum import StrEnum, unique
@@ -25,7 +41,12 @@ class ArchType(StrEnum):
 
     @classmethod
     def content(cls) -> set[str]:
-        """Returns a set of all available architecture types."""
+        """
+        Returns a set of all available architecture types.
+        This method iterates over all members of the class and collects them into a set.
+        Returns:
+            A set containing all architecture types as strings.
+        """
         return set(member for member in cls)
 
 
@@ -43,6 +64,12 @@ class SEResNet(nn.Module):
     """Squeeze and Excitation Residual Network for classification tasks."""
 
     def __init__(self, num_classes: int, arch: SEResNetArch) -> None:
+        """
+        Initializes the network architecture.
+        Args:
+            num_classes (int): The number of output classes for the classifier.
+            arch (SEResNetArch): An instance of SEResNetArch containing the architecture parameters.
+        """
         super().__init__()
         self._architecture = arch
 
@@ -85,6 +112,13 @@ class SEResNet(nn.Module):
         self.feed_forward = nn.Sequential(shrinkage, residuals, flatten, neck, classifier)
 
     def __call__(self, x: Tensor) -> Tensor:
+        """
+        Invokes the feed_forward method on the input tensor.
+        Args:
+            x (Tensor): The input tensor to be processed.
+        Returns:
+            The output tensor after applying the feed_forward method.
+        """
         return self.feed_forward(x)
 
     @property
@@ -92,10 +126,23 @@ class SEResNet(nn.Module):
         return self._architecture
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Perform a forward pass through the network.
+        Args:
+            x (Tensor): Input tensor to the network.
+        Returns:
+            Output tensor after applying the feed-forward network.
+        """
         return self.feed_forward(x)
 
     def warmup(self) -> Self:
-        """Initialize layers' dimensions by passing random data through it."""
+        """
+        Warm up the network by initializing layer dimensions with random data.
+        This method passes random data through the network to initialize the dimensions
+        of the layers. It uses a fixed seed for reproducibility.
+        Returns:
+            The instance of the network after warming up.
+        """
         input_shape = self.architecture.INPUT_SHAPE
         x = torch.randn(10, 3, *input_shape, generator=torch.manual_seed(42))
         self.feed_forward(x)
@@ -103,18 +150,39 @@ class SEResNet(nn.Module):
 
 
 def get_se_resnet_arch(arch_type: str | ArchType) -> SEResNetArch:
-    """Returns the architecture of the Squeeze and Excitation ResNet model."""
+    """
+    Returns the architecture of the Squeeze and Excitation ResNet model.
+    Args:
+        arch_type (str | ArchType): The type of architecture to retrieve. This can be either a string
+            representing the architecture type or an instance of ArchType.
+    Returns:
+        An instance of the SEResNetArch class initialized with the architecture configuration.
+    """
     arch_type = ArchType(arch_type)
     arch = ConfigFile.ARCH.load().get(arch_type)
     return SEResNetArch(**arch)
 
 
 def init_se_resnet(arch_type: str | ArchType, num_classes: int) -> SEResNet:
-    """Initializes the Squeeze and Excitation ResNet model."""
+    """
+    Initializes the Squeeze and Excitation ResNet (SE-ResNet) model.
+    Args:
+        arch_type (str | ArchType): The architecture type of the SE-ResNet model.
+            It can be a string or an instance of ArchType.
+        num_classes (int): The number of output classes for the SE-ResNet model.
+    Returns:
+        An instance of the SE-ResNet model after performing a warmup.
+    """
     model = SEResNet(num_classes, get_se_resnet_arch(arch_type))
     return model.warmup()
 
 
 def arch_summary(model: Module) -> str:
-    """Returns the architecture summary of the model."""
+    """
+    Returns the architecture summary of the model.
+    Args:
+        model (Module): The neural network model to summarize.
+    Returns:
+        A string representation of the model's architecture summary.
+    """
     return str(torchinfo.summary(model, verbose=0, depth=4))
