@@ -1,4 +1,22 @@
-"""Callbacks for the training loop."""
+"""
+This module provides various callback classes for handling model checkpoints, 
+learning curves, and early stopping during training.
+
+Classes:
+    - Callback(Protocol): Protocol for callback functions.
+    - Checkpoint(metaclass=ABCMeta): Abstract base class for saving and loading checkpoints.
+    - ModelCheckpoint(Checkpoint): Model checkpoint callback for saving and loading model states.
+    - LearningCurvesCheckpoint(Checkpoint): Learning curves checkpoint callback 
+        for saving learning curves plots.
+    - EarlyStopping: Early stopping callback with the given monitoring value.
+    
+Functions:
+    - infer_latest_dir(directory) -> PathLike | None: Returns the latest created 
+        subdirectory in the given directory.
+    - infer_latest_file(directory, ext: str | None = None) -> PathLike | None: Returns the latest 
+        created file with given extension in the given directory.
+    - is_valid_ext(ext: str) -> bool: Checks if the given file extension is valid.
+"""
 
 import os
 from abc import ABCMeta, abstractmethod
@@ -25,6 +43,8 @@ logger = init_logger("DEBUG" if DEBUG else "INFO")
 
 
 class Callback(Protocol):
+    """Each callback should implement the `__call__` method."""
+
     def __call__(self, history: History) -> Any: ...
 
 
@@ -34,6 +54,13 @@ class Checkpoint(metaclass=ABCMeta):
     _run_dir: ClassVar[PathLike | None] = None
 
     def __init__(self, checkpoints_dir: str | PathLike, checkpoints_freq: int, checkpoints_ext: str) -> None:
+        """
+        Initializes the callback with the specified parameters.
+        Args:
+            checkpoints_dir (str | PathLike): The directory where checkpoints will be saved.
+            checkpoints_freq (int): The frequency (in epochs) at which checkpoints will be saved.
+            checkpoints_ext (str): The file extension for the checkpoint files.
+        """
         self.checkpoints_dir = Path(checkpoints_dir)
         self.checkpoints_freq = int(checkpoints_freq)
         self.checkpoints_ext = str(checkpoints_ext)
@@ -41,14 +68,31 @@ class Checkpoint(metaclass=ABCMeta):
         self.run_dir: PathLike | None = None
 
     def __call__(self, history: History) -> None:
+        """
+        Invokes the callback with the given training history.
+        Args:
+            history (History): The training history object containing details of the training process.
+        """
         self.save(history)
 
     @abstractmethod
     def save(self, history: History) -> None:
-        pass
+        """
+        Save the training history.
+        Args:
+            history (History): The training history object to be saved.
+        """
 
     def load(self) -> PathLike:
-        """Returns the latest run directory."""
+        """
+        Returns the latest run directory.
+        This method infers the latest run directory from the checkpoints directory.
+        If no runs are found, it raises a FileNotFoundError.
+        Returns:
+            The path to the latest run directory.
+        Raises:
+            FileNotFoundError: If no runs are found in the checkpoints directory.
+        """
         latest_run_dir = infer_latest_dir(self.checkpoints_dir)
         if latest_run_dir is None:
             raise FileNotFoundError(f"No runs found in {self.checkpoints_dir!s}")
@@ -56,7 +100,14 @@ class Checkpoint(metaclass=ABCMeta):
         return Checkpoint._run_dir
 
     def create_run(self) -> PathLike:
-        """Creates a new run directory and returns its path."""
+        """
+        Creates a new run directory and returns its path.
+        This method generates a new directory within the `checkpoints_dir` using the current
+        timestamp formatted as "run_HH_MM_SS_DD_MM_YYYY". If the directory does not already
+        exist, it is created. The path to this new run directory is then returned.
+        Returns:
+            The path to the newly created run directory.
+        """
         if Checkpoint._run_dir is None:
             Checkpoint._run_dir = self.checkpoints_dir / strftime(f"run_%H_%M_%S_%d_%m_%Y")
             Checkpoint._run_dir.mkdir(parents=True, exist_ok=True)
@@ -74,6 +125,17 @@ class ModelCheckpoint(Checkpoint):
         checkpoints_dir: str | PathLike = "./checkpoints/",
         checkpoints_freq: int = 1,
     ) -> None:
+        """
+        Initialize the callback with the given parameters.
+        Args:
+            model (Module): The model to be trained.
+            optimizer (Optimizer): The optimizer for training the model.
+            scheduler (LRScheduler): The learning rate scheduler.
+            checkpoints_dir (str | PathLike, optional): Directory to save checkpoints.
+                Defaults to "./checkpoints/".
+            checkpoints_freq (int, optional): Frequency (in epochs) to save checkpoints.
+                Defaults to 1.
+        """
         super().__init__(checkpoints_dir, checkpoints_freq, ".tar")
         Checkpoint._run_dir = None
 
@@ -84,7 +146,6 @@ class ModelCheckpoint(Checkpoint):
         self.history: History = dict()
 
     def save(self, history: History) -> None:
-        """Saves the model, optimizer and scheduler states along with the history to the run directory."""
         if self.run_dir is None:
             self.run_dir = super().create_run()
 
@@ -110,9 +171,16 @@ class ModelCheckpoint(Checkpoint):
             self.latest_file = current_file
 
     def load(self, map_location: str | torch.device | None = None) -> None:
-        """Infer the latest run directory and file. Loads the latest model, optimizer
-        and scheduler states along with history from the run directory."""
-
+        """
+        Load the latest checkpoint from the run directory.
+        This method loads the latest checkpoint file from the run directory, updating the state of the model,
+        optimizer, and scheduler with the saved state. It also updates the latest epoch and training history.
+        Args:
+            map_location (str | torch.device | None, optional): The device to map the loaded tensors to.
+                Can be a string specifying the device, a torch.device object, or None. Defaults to None.
+        Raises:
+            RuntimeError: If the run directory is empty and no checkpoint file is found.
+        """
         self.run_dir = super().load()
         self.latest_file = infer_latest_file(self.run_dir, self.checkpoints_ext)
         if self.latest_file is None:
@@ -139,6 +207,16 @@ class LearningCurvesCheckpoint(Checkpoint):
         checkpoints_dir: str | PathLike = "./checkpoints/",
         checkpoints_freq: int = 1,
     ) -> None:
+        """
+        Initialize the callback with optional smoothing and checkpoint parameters.
+        Args:
+            smooth_out (bool): Whether to apply smoothing to the output. Defaults to True.
+            window (int): The window size for smoothing. Defaults to 5.
+            order (int): The order of the smoothing filter. Defaults to 2.
+            checkpoints_dir (str | PathLike): Directory where checkpoints will be saved.
+                Defaults to "./checkpoints/".
+            checkpoints_freq (int): Frequency of saving checkpoints. Defaults to 1.
+        """
         super().__init__(checkpoints_dir, checkpoints_freq, ".png")
         Checkpoint._run_dir = None
 
@@ -147,7 +225,6 @@ class LearningCurvesCheckpoint(Checkpoint):
         self.order = int(order)
 
     def save(self, history: History) -> None:
-        """Saves the learning curves to the run directory."""
         if self.run_dir is None:
             self.run_dir = super().create_run()
 
@@ -164,7 +241,12 @@ class LearningCurvesCheckpoint(Checkpoint):
             self.latest_file = current_file
 
     def load(self) -> None:
-        """Infer the latest run directory and file."""
+        """
+        Loads the run directory and infers the latest checkpoint file.
+        This method sets the `run_dir` attribute by calling the `load` method of the superclass.
+        It then infers the latest checkpoint file in the run directory and sets
+        the `latest_file` attribute.
+        """
         self.run_dir = super().load()
         self.latest_file = infer_latest_file(self.run_dir, self.checkpoints_ext)
 
@@ -178,6 +260,16 @@ class EarlyStopping:
         patience: int = 10,
         min_delta: float = 0.0,
     ) -> None:
+        """
+        Initializes the callback with parameters to monitor a specific value, patience, and minimum delta.
+        Args:
+            monitor_value (str | RecordedStats, optional): The value to monitor.
+                Defaults to RecordedStats.VAL_LOSS.
+            patience (int, optional): Number of epochs with no improvement after which
+                training will be stopped. Defaults to 10.
+            min_delta (float, optional): Minimum change in the monitored value to qualify
+                as an improvement. Defaults to 0.0.
+        """
         self.monitor_value = RecordedStats(monitor_value)
         self.patience = int(patience)
         self.min_delta = float(min_delta)
@@ -185,12 +277,23 @@ class EarlyStopping:
         self.min_value = float("inf")
 
     def __call__(self, history: History) -> bool:
+        """
+        Invokes the callback with the given training history.
+        Args:
+            history (History): The training history object.
+        Returns:
+            A boolean indicating whether the training should stop.
+        """
         return self.should_stop(history)
 
     def should_stop(self, history: History) -> bool:
-        """Returns True if there is no significant improvement (`min_delta`)
-        in the monitored value by the last `patience` epochs. Otherwise, returns False."""
-
+        """
+        Determines whether training should stop based on the monitored value and patience.
+        Args:
+            history (History): An object containing the history of monitored values.
+        Returns:
+            True if training should stop, False otherwise.
+        """
         current_values = history[self.monitor_value]
         current_value = 0.0 if not current_values else current_values[-1]
 
