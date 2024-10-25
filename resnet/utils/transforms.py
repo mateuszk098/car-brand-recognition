@@ -1,4 +1,17 @@
-"""Transforms for vehicle recognition."""
+"""
+This module provides transformation utilities for training and evaluation of 
+images using torchvision.
+
+Functions:
+    - train_transform(): Returns a composition of augmentation and normalization 
+        transformations for training images.
+    - eval_transform(): Returns a composition of normalization transformations 
+        for evaluation images.
+    
+Constants:
+    - MEAN: The mean values for normalization.
+    - STD: The standard deviation values for normalization.
+"""
 
 from torchvision import transforms
 from torchvision.transforms import Compose

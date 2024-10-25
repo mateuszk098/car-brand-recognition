@@ -1,4 +1,10 @@
-"""Utility functions for visualizing training history."""
+"""
+This module provides utilities for visualizing training history of machine learning models.
+
+Functions:
+    - smooth_curve(): Smooths the curve using Savitzky-Golay filter and interpolates it using cubic spline.
+    - save_learning_curves(): Saves the learning curves plot to the given path.
+"""
 
 from os import PathLike
 
@@ -28,7 +34,18 @@ VAL_COLOR = "#F78A1F"
 
 
 def smooth_curve(x: NDArray, y: NDArray, window: int = 5, order: int = 2) -> tuple[NDArray, NDArray]:
-    """Smooths the curve using Savitzky-Golay filter and interpolates it using cubic spline."""
+    """
+    Smooths the curve using Savitzky-Golay filter and interpolates it using cubic spline.
+    Args:
+        x (NDArray): The x-coordinates of the data points.
+        y (NDArray): The y-coordinates of the data points.
+        window (int, optional): The length of the filter window (i.e., the number of coefficients).
+            Must be a positive odd integer. Default is 5.
+        order (int, optional): The order of the polynomial used to fit the samples.
+            Must be less than `window`. Default is 2.
+    Returns:
+        The smoothed and interpolated x and y coordinates.
+    """
     if len(y) < window:
         return x, y
     y_filtered = savgol_filter(y, window, order)
@@ -39,7 +56,16 @@ def smooth_curve(x: NDArray, y: NDArray, window: int = 5, order: int = 2) -> tup
 
 
 def save_learning_curves(history: History, path: str | PathLike, window: int = 5, order: int = 2) -> None:
-    """Saves the learning curves plot to the given path."""
+    """
+    Save learning curves for training and validation loss and accuracy.
+    Args:
+        history (History): A history object containing training and validation metrics.
+        path (str | PathLike): The file path where the plot will be saved.
+        window (int, optional): The window size for smoothing the curves, by default 5.
+        order (int, optional): The order of the polynomial used for smoothing, by default 2.
+    Raises:
+        ValueError: If the required keys are not present in the history object.
+    """
     if not RecordedStats.content().issubset(history.keys()):
         raise ValueError(f"Missing required keys in history: {RecordedStats.content()!r}")
 

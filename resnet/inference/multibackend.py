@@ -9,10 +9,8 @@ Classes:
     - CarClassifier: Car brand classifier with support for multiple backends.
     
 Functions:
-    - load_se_resnet(arch_type: str | ArchType, weights: str | PathLike) -> SEResNet:
-        Loads pre-trained SE-ResNet model.
-    - torch2openvino(arch_type: str | ArchType, weights: str | PathLike, batch_size: int = -1) -> None:
-        Converts PyTorch model to OpenVINO format.
+    - load_se_resnet(): Loads pre-trained SE-ResNet model.
+    - torch2openvino(): Converts PyTorch model to OpenVINO format.
 """
 
 from os import PathLike
@@ -54,8 +52,7 @@ def torch2openvino(arch_type: str | ArchType, weights: str | PathLike, batch_siz
     Args:
         arch_type (str | ArchType): The architecture type of the model.
         weights (str | PathLike): The path to the model weights file.
-        batch_size (int, optional): The batch size. Defaults to -1,
-            which indicates a dynamic batch size.
+        batch_size (int, optional): The batch size. Defaults to -1, which indicates a dynamic batch size.
     """
     model = load_se_resnet(arch_type, weights)
     input_shape = model.architecture.INPUT_SHAPE

@@ -50,7 +50,19 @@ def evaluate(
     average: Literal["micro", "macro", "weighted", "none"] | None = "macro",
     normalize: Literal["none", "true", "pred", "all"] | None = None,
 ) -> EvaluationResult:
-    """Evaluate the model on the validation dataset."""
+    """
+    Evaluate the model on the validation dataset.
+    Args:
+        model (Module): The model to be evaluated.
+        loader (VehicleDataLoader): DataLoader for the validation dataset.
+        average (Literal["micro", "macro", "weighted", "none"] | None, optional):
+            The averaging method for metrics. Defaults to "macro".
+        normalize (Literal["none", "true", "pred", "all"] | None, optional):
+            Normalization method for the confusion matrix. Defaults to None.
+    Returns:
+        A dataclass containing evaluation metrics including loss, accuracy, precision,
+        recall, F1 score, and confusion matrix.
+    """
     model.eval()
     loader.eval()
 
@@ -95,6 +107,20 @@ def evaluate(
 
 
 def main(*, config_file: str | PathLike) -> None:
+    """
+    Main function to evaluate a vehicle recognition model.
+    The function performs the following steps:
+    1. Loads the configuration from the specified YAML file.
+    2. Initializes the validation dataset using the ImageFolder class.
+    3. Loads the SE-ResNet model with the specified architecture and weights.
+    4. Moves the model to the specified device (e.g., CPU or GPU).
+    5. Creates a DataLoader for the validation dataset with the specified batch size and evaluation transformations.
+    6. Evaluates the model using the validation DataLoader and specified metrics.
+    7. Logs the evaluation results including accuracy, precision, recall, F1 score, and loss.
+    8. Logs the confusion matrix.
+    Args:
+        config_file (str | PathLike): Path to the YAML configuration file.
+    """
     logger.info(f"Loading configuration from {config_file!s}...")
     config = SimpleNamespace(**load_yaml(config_file))
 

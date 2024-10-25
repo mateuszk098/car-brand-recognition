@@ -1,4 +1,11 @@
-"""Custom Data Loaders"""
+"""
+This module provides utility classes for loading vehicle recognition datasets with 
+support for different transformations during training and evaluation.
+
+Classes:
+    - VehicleDataLoader: A DataLoader subclass that supports setting different transforms 
+        for training and evaluation.
+"""
 
 from typing import Any, Callable, Protocol
 
@@ -24,6 +31,14 @@ class VehicleDataLoader(DataLoader):
         eval_transform: Compose | None = None,
         **kwargs: Any,
     ) -> None:
+        """
+        Initializes the loader with optional training and evaluation transformations.
+        Args:
+            *args (Any): Variable length argument list for the DataLoader.
+            train_transform (Compose | None, optional): Transform to apply during training. Defaults to None.
+            eval_transform (Compose | None, optional): Transform to apply during evaluation. Defaults to None.
+            **kwargs (Any): Arbitrary keyword arguments for the DataLoader.
+        """
         super().__init__(*args, **kwargs)
         self.dataset: SupportsTransform
         self.train_transform = train_transform

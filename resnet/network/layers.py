@@ -2,10 +2,10 @@
 This module defines custom neural network layers for vehicle recognition using PyTorch.
 
 Classes:
-    - MaxDepthPool2d (nn.Module)
-    - LazySqueezeExcitation (nn.Module)
-    - LazyResidualBlock (nn.Module)
-    - LazySEResidualBlock (nn.Module)
+    - MaxDepthPool2d
+    - LazySqueezeExcitation
+    - LazyResidualBlock
+    - LazySEResidualBlock
 """
 
 import torch

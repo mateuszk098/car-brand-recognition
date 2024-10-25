@@ -48,6 +48,20 @@ logger = init_logger("DEBUG" if DEBUG else "INFO")
 
 
 def main(*, config_file: str | PathLike) -> None:
+    """
+    Main function to train a vehicle recognition model using a specified configuration file.
+    The function performs the following steps:
+    1. Loads the configuration from the specified file.
+    2. Initializes the model, datasets, and data loaders.
+    3. Sets up the loss function, metric, optimizer, and learning rate scheduler.
+    4. Initializes training callbacks such as early stopping and model checkpointing.
+    5. Optionally resumes training from the latest checkpoint if specified in the configuration.
+    6. Logs configuration and model details to MLflow.
+    7. Trains the model and logs training history.
+    8. Saves the final trained model and logs it to MLflow with input and output schema signatures.
+    Args:
+        config_file (str | PathLike): Path to the YAML configuration file.
+    """
     logger.info(f"Loading configuration from {config_file!s}...")
     config = SimpleNamespace(**load_yaml(config_file))
 

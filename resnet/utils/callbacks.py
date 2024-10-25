@@ -3,19 +3,16 @@ This module provides various callback classes for handling model checkpoints,
 learning curves, and early stopping during training.
 
 Classes:
-    - Callback(Protocol): Protocol for callback functions.
-    - Checkpoint(metaclass=ABCMeta): Abstract base class for saving and loading checkpoints.
-    - ModelCheckpoint(Checkpoint): Model checkpoint callback for saving and loading model states.
-    - LearningCurvesCheckpoint(Checkpoint): Learning curves checkpoint callback 
-        for saving learning curves plots.
+    - Callback: Protocol for callback functions.
+    - Checkpoint: Abstract base class for saving and loading checkpoints.
+    - ModelCheckpoint: Model checkpoint callback for saving and loading model states.
+    - LearningCurvesCheckpoint: Learning curves checkpoint callback for saving learning curves plots.
     - EarlyStopping: Early stopping callback with the given monitoring value.
     
 Functions:
-    - infer_latest_dir(directory) -> PathLike | None: Returns the latest created 
-        subdirectory in the given directory.
-    - infer_latest_file(directory, ext: str | None = None) -> PathLike | None: Returns the latest 
-        created file with given extension in the given directory.
-    - is_valid_ext(ext: str) -> bool: Checks if the given file extension is valid.
+    - infer_latest_dir(): Returns the latest created subdirectory in the given directory.
+    - infer_latest_file(): Returns the latest created file with given extension in the given directory.
+    - is_valid_ext(): Checks if the given file extension is valid.
 """
 
 import os
@@ -115,7 +112,7 @@ class Checkpoint(metaclass=ABCMeta):
 
 
 class ModelCheckpoint(Checkpoint):
-    """Model checkpoint callback for saving and loading model states."""
+    """Checkpoint callback for saving and loading model states."""
 
     def __init__(
         self,
@@ -146,6 +143,14 @@ class ModelCheckpoint(Checkpoint):
         self.history: History = dict()
 
     def save(self, history: History) -> None:
+        """
+        Save the current state of the training process.
+        This method saves the current state of the model, optimizer, scheduler, and training history
+        to a checkpoint file at specified intervals. The checkpoint file is named based on the current
+        epoch and saved in the run directory. If a previous checkpoint file exists, it is removed.
+        Args:
+            history (History): The training history object containing the metrics and losses for each epoch.
+        """
         if self.run_dir is None:
             self.run_dir = super().create_run()
 
@@ -225,6 +230,11 @@ class LearningCurvesCheckpoint(Checkpoint):
         self.order = int(order)
 
     def save(self, history: History) -> None:
+        """
+        Save the learning curves from the training history.
+        Args:
+            history (History): The training history object containing the metrics to be saved.
+        """
         if self.run_dir is None:
             self.run_dir = super().create_run()
 
@@ -309,18 +319,20 @@ class EarlyStopping:
         return False
 
 
-def infer_latest_dir(directory) -> PathLike | None:
+def infer_latest_dir(directory: PathLike) -> PathLike | None:
     """Returns the latest created subdirectory in the given directory."""
-    dirs = (d for d in directory.glob("*") if d.is_dir())
+    directory = Path(directory)
+    dirs = (d for d in directory.iterdir() if d.is_dir())
     return max(dirs, key=os.path.getctime, default=None)
 
 
-def infer_latest_file(directory, ext: str | None = None) -> PathLike | None:
+def infer_latest_file(directory: PathLike, ext: str | None = None) -> PathLike | None:
     """Returns the latest created file with given extension in the given directory."""
+    directory = Path(directory)
     if ext is not None and is_valid_ext(ext):
-        files = (f for f in directory.glob("*") if f.is_file() and f.suffix == ext)
+        files = (f for f in directory.iterdir() if f.is_file() and f.suffix == ext)
     else:
-        files = (f for f in directory.glob("*") if f.is_file())
+        files = (f for f in directory.iterdir() if f.is_file())
     return max(files, key=os.path.getctime, default=None)
 
 

@@ -2,18 +2,14 @@
 This module defines the architecture and initialization of the Squeeze and Excitation ResNet model.
 
 Classes:
-    - ArchType (StrEnum): Enum representing available architecture types for 
-        the Squeeze and Excitation ResNet model.
-    - SEResNetArch (dataclass): Represents the architecture of the Squeeze and Excitation ResNet model.
-    - SEResNet (nn.Module): Squeeze and Excitation Residual Network for classification tasks.
+    - ArchType: Enum representing available architecture types for the Squeeze and Excitation ResNet model.
+    - SEResNetArch: Represents the architecture of the Squeeze and Excitation ResNet model.
+    - SEResNet: Squeeze and Excitation Residual Network for classification tasks.
     
 Functions:
-    - get_se_resnet_arch(arch_type: str | ArchType) -> SEResNetArch:
-        Returns the architecture of the Squeeze and Excitation ResNet model.
-    - init_se_resnet(arch_type: str | ArchType, num_classes: int) -> SEResNet:
-        Initializes the Squeeze and Excitation ResNet model.
-    - arch_summary(model: Module) -> str:
-        Returns the architecture summary of the model.
+    - get_se_resnet_arch(): Returns the architecture of the Squeeze and Excitation ResNet model.
+    - init_se_resnet(): Initializes the Squeeze and Excitation ResNet model.
+    - arch_summary(): Returns the architecture summary of the model.
 """
 
 from dataclasses import dataclass
@@ -41,12 +37,7 @@ class ArchType(StrEnum):
 
     @classmethod
     def content(cls) -> set[str]:
-        """
-        Returns a set of all available architecture types.
-        This method iterates over all members of the class and collects them into a set.
-        Returns:
-            A set containing all architecture types as strings.
-        """
+        """Returns a set of all available architecture types."""
         return set(member for member in cls)
 
 
@@ -113,7 +104,7 @@ class SEResNet(nn.Module):
 
     def __call__(self, x: Tensor) -> Tensor:
         """
-        Invokes the feed_forward method on the input tensor.
+        Invokes the forward method on the input tensor.
         Args:
             x (Tensor): The input tensor to be processed.
         Returns:
@@ -138,8 +129,6 @@ class SEResNet(nn.Module):
     def warmup(self) -> Self:
         """
         Warm up the network by initializing layer dimensions with random data.
-        This method passes random data through the network to initialize the dimensions
-        of the layers. It uses a fixed seed for reproducibility.
         Returns:
             The instance of the network after warming up.
         """
@@ -159,8 +148,8 @@ def get_se_resnet_arch(arch_type: str | ArchType) -> SEResNetArch:
         An instance of the SEResNetArch class initialized with the architecture configuration.
     """
     arch_type = ArchType(arch_type)
-    arch = ConfigFile.ARCH.load().get(arch_type)
-    return SEResNetArch(**arch)
+    arch = ConfigFile.ARCH.load()
+    return SEResNetArch(**arch[arch_type.value])
 
 
 def init_se_resnet(arch_type: str | ArchType, num_classes: int) -> SEResNet:

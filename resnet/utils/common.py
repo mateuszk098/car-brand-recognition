@@ -1,4 +1,17 @@
-"""Common utilities for the package."""
+"""
+This module provides common utility functions and classes for the vehicle recognition project.
+
+Classes:
+    - RecordedStats: Enum representing available losses and metrics to monitor during training.
+    
+Type Aliases:
+    - History: Type alias for a dictionary mapping RecordedStats to lists of floats.
+    
+Functions:
+    - remove_file(): Removes a file if it exists. Otherwise, do nothing.
+    - load_yaml(): Loads a YAML file and returns its content.
+    - init_logger(): Initializes a logger with the specified name.
+"""
 
 import logging
 import logging.config
@@ -24,6 +37,7 @@ class RecordedStats(StrEnum):
 
     @classmethod
     def content(cls) -> set[str]:
+        """Returns a set containing all members of the enum."""
         return set(member for member in cls)
 
 
@@ -39,7 +53,7 @@ def remove_file(file: str | PathLike) -> None:
 
 
 def load_yaml(file: str | PathLike) -> dict[str, Any]:
-    """Loads YAML file and return its content."""
+    """Loads YAML file and returns its content."""
     with open(file, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     return config

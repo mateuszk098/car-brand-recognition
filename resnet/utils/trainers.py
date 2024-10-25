@@ -1,4 +1,11 @@
-"""Training and validation steps for the model."""
+"""
+This module provides utility functions for training and validating a vehicle recognition model using PyTorch.
+
+Functions:
+    - train_step(): Performs a single training step for the model.
+    - valid_step(): Performs a single validation step for the model.
+    - fit(): Executes the training loop for the model over a specified number of epochs.
+"""
 
 import os
 import time

@@ -56,7 +56,7 @@ class WeightsDownloader:
         Initializes the utility class with the specified directory.
         Args:
             directory (str | PathLike, optional): The directory path where checkpoints are stored.
-                Defaults to ./checkpoints/.
+                Defaults to "./checkpoints/".
         """
         self._directory = Path(directory)
 
