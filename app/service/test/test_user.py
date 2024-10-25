@@ -1,10 +1,8 @@
-import os
 from unittest.mock import AsyncMock, MagicMock
 
 import cv2 as cv
 import numpy as np
 import pytest
-from dotenv import find_dotenv, load_dotenv
 from fastapi import UploadFile
 from pydantic import SecretStr
 from sqlalchemy.orm import Session
@@ -14,11 +12,6 @@ from app.data.models import Task, User
 from app.schema.user import Password, UserCreate, UserSchema
 from app.service import user as service
 from app.test.utils import admin_user, db_session, db_task, db_user, user_create
-
-load_dotenv(find_dotenv())
-
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 
 def test_get_user_by_username_success(db_user: User, db_session: Session) -> None:

@@ -2,11 +2,10 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.data.models import Task, User
+from app.data.repositories import TaskRepository, UserRepository
 from app.errors import RecordNotFoundError
 from app.test.utils import db_session, db_task, db_user
-
-from ..models import Task, User
-from ..repositories import TaskRepository, UserRepository
 
 
 def test_get_user_by_username_success(db_user: User, db_session: Session) -> None:
