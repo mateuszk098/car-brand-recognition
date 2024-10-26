@@ -3,8 +3,7 @@
 from datetime import timedelta
 from typing import Annotated
 
-import plotly.express as px
-from fastapi import APIRouter, Form, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Form, HTTPException, Query, UploadFile, status
 
 from app import errors
 from app.schema.user import TaskSchema, Token, UserCreate, UserSchema
@@ -98,11 +97,3 @@ async def create_task(
 async def get_user_tasks(db: DBDep, user: UserDep) -> list[TaskSchema]:
     """Get all tasks for a user."""
     return service.get_tasks_for_user(user.id, db)
-
-
-# @router.get("/test")
-# def test():
-#     df = px.data.iris()
-#     fig = px.scatter(df, x="sepal_width", y="sepal_length", color="species")
-#     fig_bytes = fig.to_image(format="png")
-#     return Response(content=fig_bytes, media_type="image/png")
