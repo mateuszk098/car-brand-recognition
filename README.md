@@ -85,7 +85,7 @@ The following table summarizes the key performance metrics for the car brand cla
 
 ## 8. Additional Steps
 
-The dataset used for training is available here: https://drive.google.com/file/d/1uzb6maz1DgN2I9W3WESPXGVmO-Wt9qIS/view?usp=sharing
+- The dataset used for training is available here: https://drive.google.com/file/d/1uzb6maz1DgN2I9W3WESPXGVmO-Wt9qIS/view?usp=sharing
 - If you want to experiment with the repository, create a virtual environment and run: `pip install -r requirements.txt`.
 - If you don't want to run the application in a container because, for example, you want to experiment with it, comment out `APP_DB_URL` in the `.env` file. Then go to the `app/` directory and run: `fastapi dev main.py` This way, the application will be running directly on the host machine, and every change will be automatically considered.
 - If you want to keep an eye on the database, go to `http://localhost:80` and login to pgAdmin 4 using `PGADMIN_DEFAULT_EMAIL` and `PGADMIN_DEFAULT_PASSWORD` that you set in `.env` file. Then, register a new server, you can name it "App". Connection host is `APP_POSTGRES_HOSTNAME` and the password is `APP_POSTGRES_PASSWORD`. If you want to experiment further with the application on the machine host, but subsequently running database on container, change: `{APP_POSTGRES_HOSTNAME}:5432` to `localhost:${APP_POSTGRES_PORT}` in `APP_DB_URL`.
